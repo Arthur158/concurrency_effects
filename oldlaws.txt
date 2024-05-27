@@ -1,0 +1,22 @@
+
+{old base case for commutativity
+
+base case: m1 = Pure x and m2 = Pure y
+
+ (Op (Choose (\k -> if k then (goesFirst (Pure x) (Pure y)) else (goesSecond (Pure x) (Pure y))))) == fmap swap (Op (Choose (\k -> if k then (goesFirst (Pure y) (Pure x)) else (goesSecond (Pure y) (Pure x)))))
+
+ -- Expand the goesFirst's and goesSecond's
+ (Op (Choose (\k -> if k then (fmap (x,) (Pure y)) else (fmap (,y) (Pure x))))) == fmap swap (Op (Choose (\k -> if k then (fmap (y,) (Pure x)) else (fmap (,x) (Pure y)))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x, y))))) == fmap swap (Op (Choose (\k -> if k then (Pure (y,x)) else (Pure (y,x)))))
+
+ -- Here, use the functor instance for Free f a to fold the swap
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))) == fold (pure . swap) Op (Op (Choose (\k -> if k then (Pure (y,x)) else (Pure (y,x)))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))) == Op (fmap (fold (pure . swap) Op) (Choose (\k -> if k then (Pure (y,x)) else (Pure (y,x)))))
+
+ -- Then, simply use the auto-derived instances for functor for Choose
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))) == Op (Choose (\k -> if k then (fold (pure . swap) Op (Pure (y,x))) else (fold (pure . swap) Op (Pure (y,x)))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))) == Op (Choose (\k -> if k then (pure . swap (y,x)) else (pure . swap (y,x))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))) == Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y))))
+ which proves our base case
+
+ }

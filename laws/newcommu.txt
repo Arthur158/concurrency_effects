@@ -1,0 +1,12 @@
+
+ commutativity === par m1 m2 == fmap swap (par m2 m1)
+
+
+par m1 m2 == fmap swap (par m2 m1)
+goesFirst m1 m2 ~+~ fmap swap (goesFirst m2 m1) == fmap swap (goesFirst m2 m1 ~+~ (fmap swap (goesFirst m1 m2)))
+
+using a lemma
+goesFirst m1 m2 ~+~ fmap swap (goesFirst m2 m1) == (fmap swap (goesFirst m2 m1) ~+~ (fmap (swap . swap) (goesFirst m1 m2)))
+goesFirst m1 m2 ~+~ fmap swap (goesFirst m2 m1) == (fmap swap (goesFirst m2 m1) ~+~ goesFirst m1 m2))
+
+which is true under commutativity of ~+~

@@ -1,0 +1,267 @@
+
+rule M: m1 || m2 == (m1 |L m2) + (m2 |L m1)
+rule LM1 (ish; the rule is a little different): pure x |L m == fmap (\y -> (x,y)) m
+rule LM2: zero |L m == zero
+rule LM3: op (fmap k x) |L m == op (fmap (\x -> (k x) || m) x)
+m1 || m2 == fmap swap (m2 || m1)
+m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
+
+ m1 || m2 == par m1 m2
+ m1 |L m2 == goesFirst m1 m2 or goesSecond m2 m1 depending on the context 
+ (depends on whether m1 or m2 is supposed to end up as the first result in the tuple)
+ '+' is denoting the nondeterministic branching into different possible results. So it is equivalent to ~+~
+
+ so rule M === par m1 m2 == goesFirst m1 m2 ~+~ goesSecond m1 m2, which is literally its definition (1 step unfolding)
+
+ rule LM1 === goesFirst (pure x) m = fmap (x,) m, which is also just a one step unfolding
+
+ rule LM2 === goesFirst zero m == zero
+              goesFirst (Op Zero) m == zero
+              Op (fmap (`par` m) Zero) == zero
+              Op Zero == zero
+
+ rule LM3 === goesFirst (Op (fmap k x)) m == Op (fmap (\x -> par (k x) m) x)
+              Op (fmap (`par` m) (fmap k x)) == Op (fmap (\x -> par (k x) m) x)
+              Op (fmap (\x -> par x m) (fmap k x)) == Op (fmap (\x -> par (k x) m) x)
+              Op (fmap ((\x -> par x m) . k) x) == Op (fmap (\x -> par (k x) m) x)
+              Op (fmap (\x -> par (k x) m) x) == Op (fmap (\x -> par (k x) m) x)
+
+ commutativity === par m1 m2 == fmap swap (par m2 m1)
+                  -- par m1 m2 == fmap swap (goesFirst m2 m1 ~+~ goesSecond m2 m1)
+                  -- goesFirst m1 m2 ~+~ goesSecond m1 m2 == fmap swap (goesFirst m2 m1 ~+~ goesSecond m2 m1)
+                  -- (Op (Choose (\k -> if k then (goesFirst m1 m2) else (goesSecond m1 m2)))) == fmap swap (Op (Choose (\k -> if k then (goesFirst m2 m1) else (goesSecond m2 m1))))
+
+NEW First prove lemma:
+a: fmap f (Op (Choose (\k -> if k then a else b))) == Op (Choose (\k -> if k then fmap f a else fmap f b))
+a2: fmap f (Op (g x)) == Op (g (fmap f x))
+a3: fmap f (fmap g (Op x)) == Op (fmap ((fmap f) . g) x)
+
+b: fmap (par (Pure x)) f == fmap (fmap (x,)) f
+   
+c: fmap (`par` (Pure x)) f == fmap (fmap (,x)) f
+
+d: don't know if we can prove this, but somehow justify that x ~+~ y == y ~+~ x
+
+e: par (Pure x) (Pure y) == Pure (x,y)
+
+f: par (par (Pure x) (Pure y)) (Pure z) == Pure ((x,y),z)
+
+g: par (Pure x) (par (Pure y) (Pure z)) == Pure (x,(y,z))
+
+{
+base case: m1 = Pure x and m2 = Pure y
+
+ (Op (Choose (\k -> if k then (goesFirst (Pure x) (Pure y)) else (goesSecond (Pure x) (Pure y))))) == fmap swap (Op (Choose (\k -> if k then (goesFirst (Pure y) (Pure x)) else (goesSecond (Pure y) (Pure x)))))
+ -- Expand the goesFirst's and goesSecond's
+ (Op (Choose (\k -> if k then (fmap (x,) (Pure y)) else (fmap (,y) (Pure x))))) == fmap swap (Op (Choose (\k -> if k then (fmap (y,) (Pure x)) else (fmap (,x) (Pure y)))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x, y))))) == fmap swap (Op (Choose (\k -> if k then (Pure (y,x)) else (Pure (y,x)))))
+
+ use lemma a:
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x, y))))) == (Op (Choose (\k -> if k then fmap swap (Pure (y,x)) else fmap swap (Pure (y,x)))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x, y))))) == (Op (Choose (\k -> if k then (Pure (swap (y,x))) else (Pure (swap (y,x))))))
+ (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x, y))))) == (Op (Choose (\k -> if k then (Pure (x,y)) else (Pure (x,y)))))
+ which concludes our base case
+}
+{
+ intermediary case: m1 = Pure x, m2 = Op (g k)
+
+ (Op (Choose (\k -> if k then (goesFirst (Pure x) (Op (g k))) else (goesSecond (Pure x) (Op (g k)))))) == fmap swap (Op (Choose (\k -> if k then (goesFirst (Op (g k)) (Pure x)) else (goesSecond (Op (g k)) (Pure x)))))
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == fmap swap (Op (Choose (\k -> if k then (Op (fmap (`par` (Pure x)) (g k))) else (fmap (,x) (Op (g k))))))
+
+ using lemma a:
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == (Op (Choose (\k -> if k then fmap swap (Op (fmap (`par` (Pure x)) (g k))) else fmap swap (fmap (,x) (Op (g k))))))
+
+ using lemma a3
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == (Op (Choose (\k -> if k then (Op (fmap ((fmap swap) . (`par` (Pure x))) (g k))) else fmap swap (fmap (,x) (Op (g k))))))
+
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == (Op (Choose (\k -> if k then (Op (fmap ((fmap swap) . (`par` (Pure x))) (g k))) else (fmap (swap . (,x)) (Op (g k))))))
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == (Op (Choose (\k -> if k then (Op (fmap ((fmap swap) . (`par` (Pure x))) (g k))) else (fmap (x,) (Op (g k))))))
+
+ using lemma d:
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap (par (Pure x)) (g k)))))) == (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (Op (fmap ((fmap swap) . (`par` (Pure x))) (g k))))))
+
+so here:
+ (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (first_prop)))) == (Op (Choose (\k -> if k then (fmap (x,) (Op (g k))) else (second_prop))))
+ which is equal if first_prop == second prop, which is:
+ Op (fmap (par (Pure x)) (g k)) == Op (fmap ((fmap swap) . (`par` (Pure x))) (g k))
+ g (par (Pure x) k) == g (fmap swap (par k (Pure x)))
+ par (Pure x) k == fmap swap (par k (Pure x))
+
+which we can recursively call until our base case.
+}
+{
+second intermediary case
+intermediary case: m1 = Op (f k), m2 = Pure y
+ (Op (Choose (\k -> if k then (goesFirst (Op (f k)) (Pure y)) else (goesSecond (Op (f k)) (Pure y))))) == fmap swap (Op (Choose (\k -> if k then (goesFirst (Pure y) (Op (f k))) else (goesSecond (Pure y) (Op (f k))))))
+ 
+ using lemma a, a3, and d (similar as in previous case)
+ (Op (Choose (\k -> if k then Op (fmap (`par` (Pure y)) (g k)) else (fmap (,y) (Op (f k)))))) == (Op (Choose (\k -> if k then (Op (fmap ((fmap swap) . (par (Pure y))) (f k))) else (fmap (,y) (Op f k)))))
+
+ so here:
+ (Op (Choose (\k -> if k then (first_prop) else (fmap (,y) (Op (f k)))))) == (Op (Choose (\k -> if k then (second_prop) else (fmap (,y) (Op f k)))))
+ which is equal if first_prop == second prop, which is:
+ Op (fmap (`par` (Pure y)) (f k)) == Op (fmap ((fmap swap) . (par (Pure y))) (f k))
+ f (par  k (Pure y) ) == f (fmap swap (par k (Pure y)))
+ par  k (Pure y) == fmap swap (par k (Pure y))
+
+ which we can recursively call until our base case.
+
+}
+{
+recursive case: m1 = Op (f k), m2 = Op (g k)
+
+ (Op (Choose (\k -> if k then (goesFirst (Op (f k)) (Op (g k))) else (goesSecond (Op (f k)) (Op (g k)))))) == fmap swap (Op (Choose (\k -> if k then (goesFirst (Op (g k)) (Op (f k))) else (goesSecond (Op (g k)) (Op (f k))))))
+
+ using lemma a, a4, and d:
+ (Op (Choose (\k -> if k then Op (fmap (`par` (Op (f k))) (g k)) else (Op (fmap (par (Op (g k))) (Op f k)))))) == (Op (Choose (\k -> if k then (Op (fmap ((fmap swap) . (par (Op (f k))) (g k)))) else (Op (fmap ((fmap swap) . (`par` (Op (g k)))) (f k))))))
+
+ which is equal if
+   Op (fmap (`par` (Op (f k))) (g k)) == (Op (fmap ((fmap swap) . (par (Op (f k))) (g k))))
+   fmap (`par` (Op (f k))) (g k) == (fmap ((fmap swap) . (par (Op (f k))) (g k)))
+   g (par k (Op (f k))) == g (fmap swap (par (Op (f k)) k))
+   par k (Op (f k)) == fmap swap (par (Op (f k)) k)
+   which can be recursively call until reaching one of the intermediary step.
+ and
+   (Op (fmap (par (Op (g k))) (Op f k))) == (Op (fmap ((fmap swap) . (`par` (Op (g k)))) (f k)))
+   fmap (par (Op (g k))) (Op f k) == fmap ((fmap swap) . (`par` (Op (g k)))) (f k)
+   f (par (Op g k) k) == f (fmap swap (par k (Op g k)))
+   par (Op g k) k == fmap swap (par k (Op g k))
+   which can be recursively call until reaching one of the intermediary step.
+}
+
+lemmas:
+
+a: fmap f (Op (Choose (\k -> if k then a else b))) == Op (Choose (\k -> if k then fmap f a else fmap f b))
+a2: fmap f (Op (g x)) == Op (g (fmap f x))
+a3: fmap f (fmap g (Op x)) == Op (fmap ((fmap f) . g) x)
+
+b: fmap (par (Pure x)) f == fmap (fmap (x,)) f
+b1: par (Pure x) f == fmap (x,) f
+   
+c: fmap (`par` (Pure x)) f == fmap (fmap (,x)) f
+c1: `par` (Pure x) g = fmap (,x) g
+
+d: don't know if we can prove this, but somehow justify that x ~+~ y == y ~+~ x
+
+e: par (Pure x) (Pure y) == Pure (x,y)
+
+f: par (par (Pure x) (Pure y)) (Pure z) == Pure ((x,y),z)
+
+g: par (Pure x) (par (Pure y) (Pure z)) == Pure (x,(y,z))
+
+ m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
+
+{
+ base case, m1 = Pure x, m2 = Pure y, m3 = Pure z
+ 
+ par (Pure x) (par (Pure y) (Pure z)) == fmap assoc (par (par (Pure x) (Pure y)) (Pure z))
+
+ using lemmas e, f and g
+Pure (x, (y,z)) == fmap assoc (Pure ((x, y),z))
+Pure (x, (y,z)) == Pure (assoc ((x, y),z))
+Pure (x, (y,z)) == Pure (x, (y,z))
+}
+
+{
+first first intermediary step: m1 = Op (f k), m2 = Pure y, m3 = Pure z
+
+ par (Op (f k)) (par (Pure y) (Pure z)) == fmap assoc (par (par (Op (f k)) (Pure y)) (Pure z))
+
+ using lemma e
+ par (Op (f k)) (Pure (y,z)) == fmap assoc (par (par (Op (f k)) (Pure y)) (Pure z))
+
+ using lemma b1 and c1
+ fmap (,(y,z)) (Op f k) == fmap (assoc . (,z) . (,y)) (Op (f k))
+ fmap (,(y,z)) (Op f k) == fmap (\x -> assoc ((x,y), z)) (Op (f k))
+ fmap (,(y,z)) (Op f k) == fmap (x,(y, z)) (Op (f k))
+}
+{
+second first intermediary step: m1 = Pure x, m2 = Op (g k), m3 = Pure z
+}
+{
+third first intermediary step: m1 = Pure x, m2 = Pure y, m3 = Op (h k)
+}
+-- all first intermediary steps must be similar in resolution.
+{
+first second intermediary step: m1 = Op (f k1), m2 = Op (g k2), m3 = Pure z
+}
+{
+first second intermediary step: m1 = Op (f k1), m2 = Op (g k2), m3 = Pure z
+
+ par (Op (f k1)) (par (Op (g k2)) (Pure z)) == fmap assoc (par (par (Op (f k1)) (Op (g k2))) (Pure z))
+
+ using lemma b1 and c1
+ par (Op (f k1)) (fmap (,z) (Op (g k2))) == fmap assoc (fmap (,z) (par (Op (f k1)) (Op g k2)))
+ par (Op (f k1)) (fmap (,z) (Op (g k2))) == fmap (assoc . (,z)) (par (Op (f k1)) (Op g k2))
+
+goesFirst (Op (f k1)) (fmap (,z) (Op (g k2))) ~+~ goesSecond (Op (f k1)) (fmap (,z) (Op (g k2))) == fmap (assoc . (,z)) (goesFirst (Op (f k1)) (Op (g k2)) ~+~ goesSecond (Op (f k1)) (Op (g k2)))
+goesFirst (Op (f k1)) (fmap (,z) (Op (g k2))) ~+~ goesSecond (Op (f k1)) (fmap (,z) (Op (g k2))) == fmap (assoc . (,z)) ((Op (fmap (`par` (Op (g k2))) (f k1))) ~+~ (Op (fmap (par (Op (f k1))) (g k2))))
+goesFirst (Op (f k1)) (fmap (,z) (Op (g k2))) ~+~ goesSecond (Op (f k1)) (fmap (,z) (Op (g k2))) == fmap (assoc . (,z)) ((Op (f (par k1 (Op g k2)))) ~+~ (Op (g (par (Op (f k1)) k2))))
+
+using lemma a:
+goesFirst (Op (f k1)) (fmap (,z) (Op (g k2))) ~+~ goesSecond (Op (f k1)) (fmap (,z) (Op (g k2))) == (fmap (assoc . (,z)) (Op (f (par k1 (Op g k2))))) ~+~ (fmap (assoc . (,z)) (Op (g (par (Op (f k1)) k2))))
+
+using lemma a2:
+goesFirst (Op (f k1)) (fmap (,z) (Op (g k2))) ~+~ goesSecond (Op (f k1)) (fmap (,z) (Op (g k2))) == (Op (f (fmap (assoc . (,z)) (par k1 (Op g k2))))) ~+~ (Op (g (fmap (assoc . (,z)) (par k2 (Op f k1)))))
+
+developping left hand side:
+goesFirst (Op (f k1)) (Op (g (fmap (,z) k2))) ~+~ goesSecond (Op (f k1)) (Op (g (fmap (,z) k2))) == (Op (f (fmap (assoc . (,z)) (par k1 (Op g k2))))) ~+~ (Op (g (fmap (assoc . (,z)) (par k2 (Op f k1)))))
+(Op (fmap (`par` (Op (g (fmap (,z) k2)))) (f k1))) ~+~ (Op (fmap (par (Op (f k1))) (g (fmap (,z) k2)))) == (Op (f (fmap (assoc . (,z)) (par k2 (Op g k1))))) ~+~ (Op (g (fmap (assoc . (,z)) (par k2 (Op f k1)))))
+(Op (f (par k1 (Op (g (fmap (,z) k2)))))) ~+~ (Op (g (par (Op (f k1)) (fmap (,z) k2)))) == (Op (f (fmap (assoc . (,z)) (par k1 (Op g k2))))) ~+~ (Op (g (fmap (assoc . (,z)) (par k2 (Op f k1)))))
+
+divide in cases on either side of the ~+~
+1st case:
+(Op (f (par k1 (Op (g (fmap (,z) k2)))))) == (Op (f (fmap (assoc . (,z)) (par k1 (Op g k2)))))
+
+-- getting rid of the Op f (recursive call)
+par k1 (Op (g (fmap (,z) k2))) == fmap (assoc . (,z)) (par k1 (Op g k2))
+par k1 (Op (g (fmap (,z) k2))) == fmap (assoc . (,z)) (par k1 (Op g k2))
+goesFirst k1 (Op (g (fmap (,z) k2))) ~+~ goesSecond k (Op (g (fmap (,z) k2))) == fmap (assoc . (,z)) (goesFirst k1 (Op (g k2)) ~+~ goesSecond k1 (Op (g k2)))
+goesFirst k1 (Op (g (fmap (,z) k2))) ~+~ goesSecond k (Op (g (fmap (,z) k2))) == (fmap (assoc . (,z)) (goesFirst k1 (Op (g k2)))) ~+~ (fmap (assoc . (,z)) (goesSecond k1 (Op (g k2))))
+goesFirst k1 (Op (g (fmap (,z) k2))) ~+~ goesSecond k (Op (g (fmap (,z) k2))) == (fmap (assoc . (,z)) (goesFirst k1 (Op (g k2)))) ~+~ (fmap (assoc . (,z)) (goesSecond k1 (Op (g k2))))
+    -- separate again:
+    goesFirst k1 (Op (g (fmap (,z) k2))) == fmap (assoc . (,z)) (goesFirst k1 (Op (g k2)))
+    -- other case:
+    goesSecond k (Op (g (fmap (,z) k2))) == (fmap (assoc . (,z)) (goesSecond k1 (Op (g k2))))
+    Op (fmap (par k1) (g (fmap (,z) k2))) == (fmap (assoc . (,z)) (Op (fmap (par k1) (g k2))))
+    Op (g (fmap ((par k1) . (,z)) k2)) == (fmap (assoc . (,z)) (Op (g (par k1 k2))))
+
+2nd case:
+Op (g (par (Op (f k1)) (fmap (,z) k2))) == Op (g (fmap (assoc . (,z)) (par k2 (Op f k1))))
+
+------ a: fmap f (Op (Choose (\k -> if k then a else b))) == Op (Choose (\k -> if k then fmap f a else fmap f b))
+------ goesFirst (Op f) y = Op (fmap (`par` y) f)
+a2: fmap f (Op (g x)) == Op (g (fmap f x))
+
+}
+
+
+ par m1 (par m2 m3) == fmap assoc (par (par m1 m2) m3)
+ goesFirst m1 (par m2 m3) ~+~ goesSecond m1 (par m2 m3) == fmap assoc (goesFirst m1 (par m2 m3) ~+~ goesSecond m1 (par m2 m3))
+ Op (Choose (\k -> if k then goesFirst m1 (par m2 m3) else goesSecond m1 (par m2 m3))) == fmap assoc (Op (Choose (\k -> if k then goesFirst (par m1 m2) m3 else goesSecond (par m1 m2) m3)))
+
+ base case, m1 = Pure x, m2 = Pure y, m3 = Pure z
+ Op (Choose (\k -> if k then goesFirst (Pure x) (par (Pure y) (Pure z)) else goesSecond (Pure x) (par (Pure y) (Pure z)))) == fmap assoc (Op (Choose (\k -> if k then (goesFirst (par (Pure x) (Pure y)) Pure z) else (goesSecond (par (Pure x) (Pure y)) (Pure z)))))
+
+ Here i take a shortcut and assume that par (Pure a) (Pure b) == Pure (a,b)
+ Op (Choose (\k -> if k then (fmap (x,) (Pure (y,z))) else (goesSecond (Pure x) (Pure (y,x))))) == fmap assoc (Op (Choose (\k -> if k then (goesFirst (Pure (x,y)) (Pure z)) else (fmap (,z) (Pure (x,y))))))
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (fmap (,(y,z) (Pure x))))) == fmap assoc (Op (Choose (\k -> if k then (fmap ((x,y),) (Pure z)) else (Pure ((x,y),z)))))
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x, (y,z))))) == fmap assoc (Op (Choose (\k -> if k then (Pure ((x,y),z)) else (Pure ((x,y),z)))))
+
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x, (y,z))))) == fold (pure . assoc) Op (Op (Choose (\k -> if k then (Pure ((x,y),z)) else (Pure ((x,y),z)))))
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x, (y,z))))) == (Op (Choose (\k -> if k then (fold (pure. assoc) Op (Pure ((x,y),z))) else (fold (pure. assoc) Op (Pure ((x,y),z))))))
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x, (y,z))))) == (Op (Choose (\k -> if k then (pure . assoc ((x,y),z)) else (pure . assoc ((x,y), z)))))
+ Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x, (y,z))))) == (Op (Choose (\k -> if k then (Pure (x,(y,z))) else (Pure (x,(y,z))))))
+ which concludes our base case.
+
+ m1 = Op f, m2 = Pure y, m3 = Pure z
+ Op (Choose (\k -> if k then goesFirst (Op f) (par (Pure y) (Pure z)) else goesSecond (Op f) (par (Pure y) (Pure z)))) == fmap assoc (Op (Choose (\k -> if k then (goesFirst (par (Op f) (Pure y)) Pure z) else (goesSecond (par (Op f) (Pure y)) (Pure z)))))
+ Op (Choose (\k -> if k then goesFirst (Op f) (Pure (y,z)) else goesSecond (Op f) (Pure (y,z)))) == fmap assoc (Op (Choose (\k -> if k then (goesFirst (par (Op f) (Pure y)) Pure z) else (goesSecond (par (Op f) (Pure y)) (Pure z)))))
+
+par (Op f) (Pure y) == goesFirst (Op f) (Pure y) ~+~ goesSecond (Op f) (Pure y)
+                    == Op (Choose (\k -> if k then (Op (fmap (`par` (Pure y)) f)) else (fmap (,y) (Op f))))
+
+ from this we derive:
+ goesFirst (par (Op f) (Pure z)) Pure z == Op (fmap (`par` (Pure z)) (Choose (\k -> if k then (Op (fmap (`par` (Pure y)) f)) else (fmap (,y) f))))
+                                        == Op (Choose (\k -> if k then (Op (fmap ((`par` (Pure z)) . (`par` (Pure y))) f)) else fmap ((,z) . (,y)) (f)))
+                                        == Op (Choose (\k -> if k then (Op fmap (x -> (x,y),z)) else ()))

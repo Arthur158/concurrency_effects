@@ -1,0 +1,54 @@
+
+lemmas:
+
+a: fmap f (Op (Choose (\k -> if k then a else b))) == Op (Choose (\k -> if k then fmap f a else fmap f b)) -- subset of rule d1
+a2: fmap f (Op (g x)) == Op (g (fmap f x))
+a3: fmap f (fmap g (Op x)) == Op (fmap ((fmap f) . g) x)
+
+b: fmap (par (Pure x)) f == fmap (fmap (x,)) f
+b1: par (Pure x) f == fmap (x,) f
+   
+c: fmap (`par` (Pure x)) f == fmap (fmap (,x)) f
+c1: `par` (Pure x) g = fmap (,x) g
+
+d: don't know if we can prove this, but somehow justify that x ~+~ y == y ~+~ x, as well as ((x ~+~ y) ~+~ z) == (x ~+~ (y ~+~ z))
+d1: f (x ~+~ y) == f x ~+~ f y
+
+e: par (Pure x) (Pure y) == Pure (x,y)
+
+f: par (par (Pure x) (Pure y)) (Pure z) == Pure ((x,y),z)
+
+g: par (Pure x) (par (Pure y) (Pure z)) == Pure (x,(y,z))
+
+Proving associativity and commutativity of ~+~. This is the only time in a proof where we actually use a handler. To prove this I use the nondeterministic handler of choose:
+
+-- Handler that makes a list accumulating the results of the "True" and "False" branches. Zeroes are discarded.
+hChoose' :: Functor f' => Handler Choose a f' [a]
+hChoose' = Handler
+  { ret = \x -> pure [x]
+  , hdlr = \case
+               Choose f -> f False >>= \l -> fmap (++ l) (f True)
+               Zero -> pure []}
+
+Since this handler is supposed to accumulate all the results of all the branches, It is useful to use it for proving those.
+The output is going to be a Free monad with as a value in the Pure a list of all the accumulated results of each branch. 
+We say that the output of two ~+~ are equal when the list contained in the Pure of both of the resulting free monads contain the same elements in the same quantities, irrespective of their order
+
+first: commutativity:
+
+handle hChoose' (a ~+~ b) == handle hChoose' (b ~+~ a)
+handle hChoose' (Op (Choose (\k -> if k then a else b))) == handle hChoose' (Op (Choose (\k -> if k then b else a)))
+
+-- unfolding the handle into a fold. here i replace the ret and hdlr by ret and hdlr
+fold ret hdlr (Op (Choose (\k -> if k then a else b))) == fold ret hdlr (Op (Choose (\k -> if k then b else a)))
+hdlr (fmap (fold gen alg) (Choose (\k -> if k then a else b))) == hdlr (fmap (fold gen alg) (Choose (\k -> if k then b else a)))
+hdlr ((Choose (\k -> if k then (fold gen alg a) else (fold gen alg b)))) == hdlr ((Choose (\k -> if k then (fold gen alg b) else (fold gen alg a))))
+
+-- execute the hdlr
+(fold gen alg a) >>= \l -> fmap (++ l) (fold gen alg b) == (fold gen alg b) >>= \l -> fmap (++ l) (fold gen alg a)
+assuming the value of the pure of a is the list l, and the value of the pure of b is the list r, the LHS will have r ++ l as a value of the pure , while the RHS will have r ++ l. This means both sides are equal under our definition
+
+fold :: Functor f => (a -> b) -> (f b -> b) -> Free f a -> b
+fold gen _   (Pure x) = gen x
+fold gen alg (Op f)   = alg (fmap (fold gen alg) f)
+
