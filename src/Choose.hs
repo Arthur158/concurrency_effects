@@ -15,8 +15,8 @@ module Choose (
   , hChooseTrue
   , hChoose'
   , (~+~)
-  , Free (..)
   , pick
+  , sumContinuations 
   ) where
 
 import Lib
@@ -41,19 +41,18 @@ choose = Op (inj' (Choose Pure))
 pick :: Choose <: f => Int -> Free f Int
 pick a = Op (inj' (Pick a Pure))
 
-
 -- Smart constructor for Zero
 zero :: Choose <: f => Free f a
 zero = Op (inj' Zero)
 
--- Handler that always chooses the "True" branch (No nondeterminism then)
+-- Handler that always chooses the "True" or the "0" branch (No nondeterminism then)
 hChooseTrue :: Functor f' => Handler Choose a f' (Maybe a)
 hChooseTrue = Handler
   { ret = pure . Just
   , hdlr = \case 
     Choose f -> f True
+    Pick _ f -> f 0
     Zero -> pure Nothing} -- here somehow feed f True or/and false
-
 
 -- Nondeterministic handler for Choose. Accumulates the results of all the branches in a list
 hChoose' :: Functor f' => Handler Choose a f' [a]
@@ -71,8 +70,8 @@ m1 ~+~ m2 = do
   if b then m1 else m2
 
 -- Syntactic sugar for choosing from a list of continuations using Choose
-sum :: Choose <: f => [Free f a] -> Free f a
-sum xs= do
+sumContinuations :: Choose <: f => [Free f a] -> Free f a
+sumContinuations xs = do
   m <- pick (length xs)
   xs !! m
 

@@ -15,6 +15,8 @@ module LockConc (
   , unlock
   , lockPar
   , hLock
+  , (~|#|~)
+  , (~|#|>~)
   ) where
 
 import Lib
@@ -43,13 +45,13 @@ hLock = Handler
                    Unlock k -> k}
 
 -- version of par (from src/Conc.hs) that implements locks
-lockPar :: (Choose <: f) => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+lockPar :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 lockPar (Pure x) y = fmap (x,) y
 lockPar x (Pure y) = fmap (,y) x
 lockPar x y = goesFirstLock x y ~+~ fmap swap (goesFirstLock y x)
 
 -- version of goesFirst (from src/Conc.hs) that implements locks
-goesFirstLock :: (Choose <: f) => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+goesFirstLock :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 goesFirstLock (Pure x) y = lockPar (pure x) y
 goesFirstLock (Op f) y = case f of
                        R _ -> Op (inj' (fmap (`lockPar` y) f))
@@ -58,10 +60,19 @@ goesFirstLock (Op f) y = case f of
                                 Unlock k -> Op (inj' (Unlock (lockPar k y)))
 
 -- function called when a par is locked on a program
-lockFirst :: (Choose <: f) => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+lockFirst :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 lockFirst (Pure x) y = fmap (x,) y 
 lockFirst (Op f) y = case f of
                        R _ -> Op (inj' (fmap (`lockFirst` y) f))
                        L f' -> case f' of
                                 Lock k -> Op (inj' (Lock (lockFirst k y)))
                                 Unlock k -> Op (inj' (Unlock (lockPar k y)))
+
+-- Adaptation of the symbol || that denotes the use of locks
+(~|#|~):: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+x ~|#|~ y = lockPar x y
+
+-- Adaptation of the symbol for leftmerge that also denotes the use of locks
+(~|#|>~) :: (Choose <: f) => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+x ~|#|>~ y = goesFirstLock x y
+

@@ -9,6 +9,9 @@
 
 module Conc (
   par,
+  goesFirst,
+  (~||~),
+  (~||>~)
   ) where
 
 import Lib
@@ -27,3 +30,11 @@ par x y = do
 goesFirst :: Choose <: f => Free f a -> Free f b -> Free f (a, b)
 goesFirst (Pure x) y = fmap (x,) y
 goesFirst (Op x) y = Op (fmap (`par` y) x)
+
+-- Using the same symbol as in the book "Modelling and analysis of communicating systems" by Jan Friso Groote and Mohammad Reza Mousavi
+(~||~) :: Choose <: f => Free f a -> Free f b -> Free f (a, b)
+x ~||~ y = par x y
+
+-- Adaptation of the symbol for leftmerge from the book "Modelling and analysis of communicating systems" by Jan Friso Groote and Mohammad Reza Mousavi
+(~||>~) :: Choose <: f => Free f a -> Free f b -> Free f (a, b)
+x ~||>~ y = goesFirst x y

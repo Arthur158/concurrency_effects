@@ -5,8 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE OverlappingInstances #-}
 
 module State (
@@ -24,7 +22,6 @@ import Lib
 import HigherOrder
 import Err
 import End
-import NonDet
 
 data State s k
   = Put s k
@@ -50,24 +47,6 @@ hState' = Handler_
   , hdlr_ = \x ss -> case x of
       Put s' k -> k (s':ss)
       Get k -> k (head ss) ss }
-
--- Unfortunately, unable to do more polymorphic, as we cannot access the inside of a context fo which we don't konw the context
-boxPuts :: Free (State s + End) a -> s -> [s]
-boxPuts (Pure _) p = []
-boxPuts (Op s) p = case s of
-                     L (Put s k) -> s : boxPuts k p
-                     L (Get k) -> boxPuts (k p) p
-
-
-
-
--- hStateND' :: Functor g => HandlerND_ (State s) a [s] g (a, [s])
--- hStateND' = HandlerND_
---   { retND_ = \x ss ->  [PureND (x, ss)]
---   , hdlrND_ = \x ss -> case x of
---       Put s' k -> k (s':ss)
---       Get k -> k (head ss) ss }
-
 
 get' :: State s <: f => Free f s
 get' = Op (inj' (Get Pure))
