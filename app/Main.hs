@@ -100,8 +100,8 @@ main = do
   --     result = un(handle hChoose' (handle_ hState' (handle hLock(handle hErr (handle hEndOfProgram parnew))) [0:: Int]))
   
   
-  let result :: [Int]
-      result = un(handle hChoose' (pickNumber))
+  -- let result :: [Int]
+  --     result = un(handle hChoose' (pickNumber))
 
   -- Print the value of result
   -- print result
