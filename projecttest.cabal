@@ -25,18 +25,14 @@ source-repository head
 
 library
   exposed-modules:
-      BoxAndDia
       Choose
       Conc
-      ConcEffect
       End
       Err
       HigherOrder
       HigherOrder2
       Lib
       LockConc
-      NewConc
-      NonDet
       Programs
       State
       Util
