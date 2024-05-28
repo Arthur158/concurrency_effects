@@ -15,8 +15,10 @@ module Choose (
   , hChooseTrue
   , hChoose'
   , (~+~)
+  , Free (..)
   , pick
   , sumContinuations 
+  , hChooseLog
   ) where
 
 import Lib
@@ -25,7 +27,6 @@ import Control.Applicative
 import Control.Monad
 
 -- Effect for nondeterminism. Choose allows for a branching into a "True" branch and/or a "False" branch.
--- Pick is the same as choose but for a range of numbers
 -- Zero is denoting an empty result.
 data Choose k 
   = Choose (Bool -> k)
@@ -54,7 +55,8 @@ hChooseTrue = Handler
     Pick _ f -> f 0
     Zero -> pure Nothing} -- here somehow feed f True or/and false
 
--- Nondeterministic handler for Choose. Accumulates the results of all the branches in a list
+
+-- Handler that makes a list accumulating the results of the "True" and "False" branches. Zeroes are discarded.
 hChoose' :: Functor f' => Handler Choose a f' [a]
 hChoose' = Handler
   { ret = \x -> pure [x]
@@ -63,13 +65,12 @@ hChoose' = Handler
                Pick n f -> foldM (\acc i -> fmap (++ acc) (f i)) [] [0..n-1]
                Zero -> pure []}
 
--- Syntactic sugar for choosing between two continuations using Choose
+-- Function for choosing nondeterministically between two continuation
 (~+~) :: Choose <: f => Free f a -> Free f a -> Free f a
 m1 ~+~ m2 = do
   b <- choose
   if b then m1 else m2
 
--- Syntactic sugar for choosing from a list of continuations using Choose
 sumContinuations :: Choose <: f => [Free f a] -> Free f a
 sumContinuations xs = do
   m <- pick (length xs)
@@ -79,4 +80,13 @@ sumContinuations xs = do
 instance (Functor f, Choose <: f) => Alternative (Free f) where
   empty = zero
   (<|>) = (~+~) 
+
+-- Handler that makes a list accumulating the results of the "True" and "False" branches. Zeroes are discarded.
+hChooseLog :: Functor f' => Handler Choose a f' [(a, [Bool])]
+hChooseLog = Handler
+  { ret = \x -> pure [(x, [])]
+  , hdlr = \case
+               Choose f -> (fmap (map (\(x,ls) -> (x,False : ls))) (f False)) >>= \l -> fmap (++ l) (fmap (map (\(x,ls) -> (x,False : ls))) (f True))
+               Pick n f -> foldM (\acc i -> fmap (++ acc) (f i)) [] [0..n-1]
+               Zero -> pure []}
 
