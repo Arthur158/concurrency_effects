@@ -1,0 +1,16 @@
+
+
+ rule LM1 === (Pure x) ~||>~ m = fmap (x,) m
+              (Pure x) ~||~ m = fmap (x,) m
+
+ rule LM2 === zero ~||>~ m == zero
+              (Op Zero) ~||>~ m == zero
+              Op (fmap (~||~ m) Zero) == zero
+              Op Zero == zero
+
+  rule LM3 === (Op (fmap k x)) ~||>~ m == Op (fmap (\x -> (k x) ~||~ m) x)
+                Op (fmap (~||~ m) (fmap k x)) == Op (fmap (\x -> (k x) ~||~ m) x)
+                Op (fmap ((~||~ m) . k) x) == Op (fmap (\x -> (k x) ~||~ m) x)
+
+ rule LM4 === (x ~+~ y) ~||>~ z == x ~||>~ z ~+~ y ~||>~ z
+              apply lemma d1 with function " ~||>~ z "
