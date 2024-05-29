@@ -44,6 +44,14 @@ hLock = Handler
                    Lock k -> k
                    Unlock k -> k}
 
+
+-- Function for choosing nondeterministically between two continuation
+(#+#) :: (Lock <: f, Choose <: f) => Free f a -> Free f a -> Free f a
+m1 #+# m2 = do
+  lock
+  b <- choose
+  if b then do m1 else do m2
+
 -- version of par (from src/Conc.hs) that implements locks
 lockPar :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 lockPar (Pure x) y = fmap (x,) y
@@ -54,7 +62,7 @@ lockPar x y = goesFirstLock x y ~+~ fmap swap (goesFirstLock y x)
 goesFirstLock :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 goesFirstLock (Pure x) y = lockPar (pure x) y
 goesFirstLock (Op f) y = case f of
-                       R _ -> Op (inj' (fmap (`lockPar` y) f))
+                       R f' -> Op (inj' (fmap (`lockPar` y) f'))
                        L f' -> case f' of
                                 Lock k -> Op (inj' (Lock (lockFirst k y)))
                                 Unlock k -> Op (inj' (Unlock (lockPar k y)))
@@ -63,7 +71,7 @@ goesFirstLock (Op f) y = case f of
 lockFirst :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 lockFirst (Pure x) y = fmap (x,) y 
 lockFirst (Op f) y = case f of
-                       R _ -> Op (inj' (fmap (`lockFirst` y) f))
+                       R f' -> Op (inj' (fmap (`lockFirst` y) f'))
                        L f' -> case f' of
                                 Lock k -> Op (inj' (Lock (lockFirst k y)))
                                 Unlock k -> Op (inj' (Unlock (lockPar k y)))

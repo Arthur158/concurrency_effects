@@ -15,7 +15,6 @@ module State (
   , put'               -- Export the put function
   , hErr              -- Export the hErr handler
   , hState'
-  , boxPuts
   ) where
 
 import Lib

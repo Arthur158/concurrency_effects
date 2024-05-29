@@ -19,6 +19,7 @@ module Choose (
   , pick
   , sumContinuations 
   , hChooseLog
+  , hChooseOrder
   ) where
 
 import Lib
@@ -53,8 +54,7 @@ hChooseTrue = Handler
   , hdlr = \case 
     Choose f -> f True
     Pick _ f -> f 0
-    Zero -> pure Nothing} -- here somehow feed f True or/and false
-
+    Zero -> pure Nothing}
 
 -- Handler that makes a list accumulating the results of the "True" and "False" branches. Zeroes are discarded.
 hChoose' :: Functor f' => Handler Choose a f' [a]
@@ -86,7 +86,15 @@ hChooseLog :: Functor f' => Handler Choose a f' [(a, [Bool])]
 hChooseLog = Handler
   { ret = \x -> pure [(x, [])]
   , hdlr = \case
-               Choose f -> (fmap (map (\(x,ls) -> (x,False : ls))) (f False)) >>= \l -> fmap (++ l) (fmap (map (\(x,ls) -> (x,False : ls))) (f True))
+               Choose f -> fmap (map (\(x,ls) -> (x,ls ++ [False]))) (f False) >>= \l -> fmap (++ l) (fmap (map (\(x,ls) -> (x,ls ++ [True]))) (f True))
                Pick n f -> foldM (\acc i -> fmap (++ acc) (f i)) [] [0..n-1]
                Zero -> pure []}
 
+hChooseOrder :: Handler_ Choose a [Bool] g (Either String a)
+hChooseOrder = Handler_
+  { ret_ = \x _ -> Pure (Right x)
+    , hdlr_ = \x ss -> case (x, ss) of
+                        (Choose f, h:t) -> f h (t ++ [h])
+                        (Choose _, []) -> Pure (Left "The list given was empty")
+                        (Pick _ _, _) -> Pure (Left "Pick is not supported by this handler")
+                        (Zero, _) -> Pure (Left "The continuation ended in a Zero")}
