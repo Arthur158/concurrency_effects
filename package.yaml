@@ -33,6 +33,7 @@ ghc-options:
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
+- -w
 
 library:
   source-dirs: src

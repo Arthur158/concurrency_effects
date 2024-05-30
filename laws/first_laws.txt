@@ -13,7 +13,8 @@ m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
 
  so rule M === par m1 m2 == goesFirst m1 m2 ~+~ goesSecond m1 m2, which is literally its definition (1 step unfolding)
 
- rule LM1 === goesFirst (pure x) m = fmap (x,) m, which is also just a one step unfolding
+ rule LM1 === goesFirst (Op (f (Pure x))) m == (Op f (fmap (x,) m)
+          === Op (f (par (Pure x) m)) == (Op f (fmap (x,) m)
 
  rule LM2 === goesFirst zero m == zero
               goesFirst (Op Zero) m == zero
@@ -25,6 +26,14 @@ m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
               Op (fmap (\x -> par x m) (fmap k x)) == Op (fmap (\x -> par (k x) m) x)
               Op (fmap ((\x -> par x m) . k) x) == Op (fmap (\x -> par (k x) m) x)
               Op (fmap (\x -> par (k x) m) x) == Op (fmap (\x -> par (k x) m) x)
+
+-- new version (we have to talk about the interchangeability of an effect and its smart constructor)
+LM3 === goesFirst (Op (f (Pure x)) >>= a) b == Op (f (Pure x)) >>= par a b
+        goesFirst (Op (f a)) b == Op (f (par a b))
+        Op (f (par a b)) == Op (f (par a b))
+
+
+        Op (f (par (Pure x >>= a) b)) == Op (f (Pure x)) >>= par a b
 
  rule LM4 === goesFirst (x ~+~ y) z == goesFirst x z ~+~ goesFirst y z
               apply lemma d1 with function `goesFirst` z
