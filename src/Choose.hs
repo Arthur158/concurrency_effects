@@ -26,6 +26,7 @@ import Lib
 import HigherOrder
 import Control.Applicative
 import Control.Monad
+import Err
 
 -- Effect for nondeterminism. Choose allows for a branching into a "True" branch and/or a "False" branch.
 -- Zero is denoting an empty result.
@@ -86,15 +87,15 @@ hChooseLog :: Functor f' => Handler Choose a f' [(a, [Bool])]
 hChooseLog = Handler
   { ret = \x -> pure [(x, [])]
   , hdlr = \case
-               Choose f -> fmap (map (\(x,ls) -> (x,ls ++ [False]))) (f False) >>= \l -> fmap (++ l) (fmap (map (\(x,ls) -> (x,ls ++ [True]))) (f True))
-               Pick n f -> foldM (\acc i -> fmap (++ acc) (f i)) [] [0..n-1]
+               Choose f -> fmap (map (\(x,ls) -> (x,[False] ++ ls))) (f False) >>= \l -> fmap (++ l) (fmap (map (\(x,ls) -> (x,[True]++ls))) (f True))
+               Pick n f -> foldM (\acc i -> fmap (acc ++) (f i)) [] [0..n-1]
                Zero -> pure []}
 
-hChooseOrder :: Handler_ Choose a [Bool] g (Either String a)
+hChooseOrder :: (Err <: g) => Handler_ Choose a [Bool] g a
 hChooseOrder = Handler_
-  { ret_ = \x _ -> Pure (Right x)
+  { ret_ = \x _ -> Pure x
     , hdlr_ = \x ss -> case (x, ss) of
                         (Choose f, h:t) -> f h (t ++ [h])
-                        (Choose _, []) -> Pure (Left "The list given was empty")
-                        (Pick _ _, _) -> Pure (Left "Pick is not supported by this handler")
-                        (Zero, _) -> Pure (Left "The continuation ended in a Zero")}
+                        (Choose _, []) -> err' "The list given was empty"
+                        (Pick _ _, _) -> err' "Pick is not supported by this handler"
+                        (Zero, _) -> err' "The continuation ended in a Zero"}

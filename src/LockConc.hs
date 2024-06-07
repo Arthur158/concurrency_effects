@@ -14,6 +14,7 @@ module LockConc (
   , lock
   , unlock
   , lockPar
+  , nlockPar
   , hLock
   , (~|#|~)
   , (~|#|>~)
@@ -84,3 +85,26 @@ x ~|#|~ y = lockPar x y
 (~|#|>~) :: (Choose <: f) => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 x ~|#|>~ y = goesFirstLock x y
 
+nlockPar :: Choose <: f => Int -> Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+nlockPar 0 _ _ = zero
+nlockPar _ (Pure x) y = fmap (x,) y
+nlockPar _ x (Pure y) = fmap (,y) x
+nlockPar n x y = ngoesFirstLock n x y ~+~ fmap swap (ngoesFirstLock n y x)
+
+-- version of goesFirst (from src/Conc.hs) that implements locks
+ngoesFirstLock :: Choose <: f => Int -> Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+ngoesFirstLock _ (Pure x) y = lockPar (pure x) y
+ngoesFirstLock n (Op f) y = case f of
+                       R f' -> Op (inj' (fmap (flip (nlockPar (n-1)) y) f'))
+                       L f' -> case f' of
+                                Lock k -> Op (inj' (Lock (nlockFirst n k y)))
+                                Unlock k -> Op (inj' (Unlock (nlockPar (n-1) k y)))
+
+-- function called when a par is locked on a program
+nlockFirst :: Choose <: f => Int -> Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
+nlockFirst _ (Pure x) y = fmap (x,) y 
+nlockFirst n (Op f) y = case f of
+                       R f' -> Op (inj' (fmap (flip (nlockFirst n) y) f'))
+                       L f' -> case f' of
+                                Lock k -> Op (inj' (Lock (nlockFirst n k y)))
+                                Unlock k -> Op (inj' (Unlock (nlockPar (n-1) k y)))

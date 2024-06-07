@@ -15,6 +15,7 @@ module State (
   , put'               -- Export the put function
   , hErr              -- Export the hErr handler
   , hState'
+  , hStateS
   ) where
 
 import Lib
@@ -36,6 +37,13 @@ put s = Op (inj (Put s (Pure ())))
 hState :: Functor g => Handler_ (State s) a s g (a, s)
 hState = Handler_
   { ret_ = \x s -> pure (x, s)
+  , hdlr_ = \x s -> case x of
+      Put s' k -> k s'
+      Get k -> k s s }
+
+hStateS :: Functor g => Handler_ (State s) a s g a
+hStateS = Handler_
+  { ret_ = \x s -> pure x
   , hdlr_ = \x s -> case x of
       Put s' k -> k s'
       Get k -> k s s }

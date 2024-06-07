@@ -5,11 +5,11 @@ import End
 import Choose
 import Err
 import State
-import Choose (hChoose', hChooseTrue, hChooseOrder)
 import Data.List (nub)
 import Util
 import LockConc
 import Programs 
+import ABPModel
 
 main :: IO ()
 main = do
@@ -73,8 +73,8 @@ main = do
   -- let result :: [(Int, Int)]
   --     result = un(handle hChoose' newpar)
 
-  -- let result :: [Either String Int]
-  --     result = un(handle hChoose' (handle hErr choice_and_error))
+  -- let result :: [(Either String Int, [Bool])]
+  --     result = un(handle hChooseLog (handle hErr choice_and_error))
 
   -- let result :: [(Either String (Int, Int), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hErr (handle hLock parWithLock3)) [0:: Int]))
@@ -84,13 +84,17 @@ main = do
   -- let result :: [((Int, Int), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock tst) [0:: Int]))
 
-  -- let result :: [((Either String (Int, Bool), [Int]), [Bool])]
-  --     result = un(handle hChooseLog (handle_ hState' (handle hErr (handle hLock pairing)) [0::Int]))
+  let result ::([(Either String (Int, Bool), [Bool])], [Int]) 
+      result = un(handle_ hState' (handle hChooseLog (handle hErr (handle hLock pairing))) [0::Int])
+  -- let result2 :: Either String [(((Int, Bool), [Int]), [Bool])]
+  --     result2 = un(handle hErr (handle hChooseLog (handle_ hState' (handle hLock pairing) [0::Int])))
+  -- let result2 :: Either String ((Int, Bool), [Int])
+  --     result2 = un(handle hErr (handle_ hChooseOrder (handle_ hState' (handle hLock pairing) [0::Int])[True::Bool]))
   -- let result :: [((Either String (Bool, Bool), [Int]), [Bool])]
   --     result = un(handle hChooseLog (handle_ hState' (handle hErr (handle hLock pairing2)) [0::Int]))
 
-  let result :: [(((Int, Bool), Bool), [Int])]
-      result = un(handle hChoose' (handle_ hState' (handle hLock triplepairing) [0::Int]))
+  -- let result :: [(Either String ((Int, Bool), Bool), [Int])]
+  --     result = un(handle hChoose' (handle_ hState' (handle hErr (handle hLock triplepairing)) [0::Int]))
   -- let result2 :: [((Int, (Bool, Bool)), [Int])]
   --     result2 = un(handle hChoose' (handle_ hState' (handle hLock triplepairing2) [0::Int]))
   -- let result :: [(Either String (Int, Int), [Int])]
@@ -98,7 +102,11 @@ main = do
   -- let result :: [(Either String (Int, Bool), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock(handle hErr (handle hEndOfProgram parnew))) [0:: Int]))
   
+  let result ::[((), [Int])] 
+      result = un(handle hChoose' (dabpmodel 24 [0::Int,1,2,3]))
   
+  -- let result ::[(((), [Int]), [Bool])] 
+  --     result = un(handle hChooseLog (dabpmodel 15 [0::Int, 1]))
   -- let result :: [Int]
   --     result = un(handle hChoose' (pickNumber))
 

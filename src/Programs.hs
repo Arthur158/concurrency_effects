@@ -296,75 +296,75 @@ newpar :: Choose <: f => Free f (Int, Int)
 newpar = par (pure 4) (zero)
 
 
-program1 :: (Choose <: f,State Int <: f, Lock <: f) => Free f Int
-program1 = do
-  lock
-  (s::Int) <- get'
-  put' (s + 4)
-  unlock
-  (s::Int) <- get'
-  if s > 7 then zero else Pure s
-
-program2 :: (State Int <: f, Lock <: f) => Free f Bool
-program2 = do
-  lock
-  (s::Int) <- get'
-  put' (s+5)
-  unlock
-  (s::Int) <- get'
-  Pure (s > 7)
-
-program3 :: (State Int <: f, Lock<: f) => Free f Bool
-program3 = do
-  lock
-  (s::Int) <- get'
-  put' (s - 3)
-  unlock
-  (s::Int) <- get'
-  Pure (s < 4)
-
-pairing :: (Choose <: f, State Int <: f) => Free (Lock + f) (Int, Bool)
-pairing = lockPar program1 program2
-
-triplepairing :: (Choose <: f, State Int <: f) => Free (Lock + f) ((Int, Bool), Bool)
-triplepairing = lockPar (lockPar program1 program2) program3
-
-triplepairing2 :: (Choose <: f, State Int <: f) => Free (Lock + f) (Int, (Bool, Bool))
-triplepairing2 = lockPar program1 (lockPar program2 program3)
-
-
-
-
--- program1 :: (Choose <: f,State Int <: f) => Free f Int
+-- program1 :: (Choose <: f,State Int <: f, Lock <: f, Err <: f) => Free f Int
 -- program1 = do
+--   lock
 --   (s::Int) <- get'
 --   put' (s + 4)
+--   unlock
 --   (s::Int) <- get'
---   if s > 7 then zero else Pure s
+--   if s > 7 then err' "foo" else Pure s
 --
--- program2 :: (State Int <: f) => Free f Bool
+-- program2 :: (State Int <: f, Lock <: f) => Free f Bool
 -- program2 = do
+--   lock
 --   (s::Int) <- get'
 --   put' (s+5)
+--   unlock
 --   (s::Int) <- get'
 --   Pure (s > 7)
 --
--- program3 :: (State Int <: f) => Free f Bool
+-- program3 :: (State Int <: f, Lock<: f) => Free f Bool
 -- program3 = do
+--   lock
 --   (s::Int) <- get'
 --   put' (s - 3)
+--   unlock
 --   (s::Int) <- get'
 --   Pure (s < 4)
 --
--- pairing :: (Choose <: f, State Int <: f) => Free f (Int, Bool)
--- pairing = par program1 program2
+-- pairing :: (Choose <: f, State Int <: f, Err <: f) => Free (Lock + f) (Int, Bool)
+-- pairing = lockPar program1 program2
 --
+-- triplepairing :: (Choose <: f, State Int <: f, Err <: f) => Free (Lock + f) ((Int, Bool), Bool)
+-- triplepairing = lockPar (lockPar program1 program2) program3
 --
--- triplepairing :: (Choose <: f, State Int <: f) => Free f ((Int, Bool), Bool)
--- triplepairing = par (par program1 program2) program3
---
--- triplepairing2 :: (Choose <: f, State Int <: f) => Free f (Int, (Bool, Bool))
--- triplepairing2 = par program1 (par program2 program3)
+-- triplepairing2 :: (Choose <: f, State Int <: f, Err <: f) => Free (Lock + f) (Int, (Bool, Bool))
+-- triplepairing2 = lockPar program1 (lockPar program2 program3)
+
+
+
+
+program1 :: (Choose <: f,State Int <: f, Err <: f) => Free f Int
+program1 = do
+  (s::Int) <- get'
+  put' (s + 4)
+  (s::Int) <- get'
+  if s > 7 then err' "foo" else Pure s
+
+program2 :: (State Int <: f) => Free f Bool
+program2 = do
+  (s::Int) <- get'
+  put' (s+5)
+  (s::Int) <- get'
+  Pure (s > 7)
+
+program3 :: (State Int <: f) => Free f Bool
+program3 = do
+  (s::Int) <- get'
+  put' (s - 3)
+  (s::Int) <- get'
+  Pure (s < 4)
+
+pairing :: (Choose <: f, State Int <: f, Err <: f) => Free f (Int, Bool)
+pairing = par program1 program2
+
+
+triplepairing :: (Choose <: f, State Int <: f, Err <: f) => Free f ((Int, Bool), Bool)
+triplepairing = par (par program1 program2) program3
+
+triplepairing2 :: (Choose <: f, State Int <: f, Err <: f) => Free f (Int, (Bool, Bool))
+triplepairing2 = par program1 (par program2 program3)
 
 
 

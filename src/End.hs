@@ -26,5 +26,3 @@ data End k -- No constructors!
 un :: Free End a -> a
 un (Pure x) = x
 un (Op f) = case f of
-
-
