@@ -10,6 +10,7 @@ import Util
 import LockConc
 import Programs 
 import ABPModel
+import Choose (hChooseOrder, hChoose')
 
 main :: IO ()
 main = do
@@ -102,8 +103,8 @@ main = do
   -- let result :: [(Either String (Int, Bool), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock(handle hErr (handle hEndOfProgram parnew))) [0:: Int]))
   
-  let result ::[((), [Int])] 
-      result = un(handle hChoose' (dabpmodel 24 [0::Int,1,2,3]))
+  let result ::[((), [Int])]
+      result = un(handle hChoose' (dabpmodel 20 [0::Int,1,2,3,4]))
   
   -- let result ::[(((), [Int]), [Bool])] 
   --     result = un(handle hChooseLog (dabpmodel 15 [0::Int, 1]))

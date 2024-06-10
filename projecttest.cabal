@@ -31,7 +31,6 @@ library
       End
       Err
       HigherOrder
-      HigherOrder2
       Lib
       LockConc
       Programs

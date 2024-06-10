@@ -15,6 +15,7 @@ module LockConc (
   , unlock
   , lockPar
   , nlockPar
+  , ngoesFirstLock
   , hLock
   , (~|#|~)
   , (~|#|>~)
@@ -45,14 +46,6 @@ hLock = Handler
                    Lock k -> k
                    Unlock k -> k}
 
-
--- Function for choosing nondeterministically between two continuation
-(#+#) :: (Lock <: f, Choose <: f) => Free f a -> Free f a -> Free f a
-m1 #+# m2 = do
-  lock
-  b <- choose
-  if b then do m1 else do m2
-
 -- version of par (from src/Conc.hs) that implements locks
 lockPar :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
 lockPar (Pure x) y = fmap (x,) y
@@ -66,7 +59,7 @@ goesFirstLock (Op f) y = case f of
                        R f' -> Op (inj' (fmap (`lockPar` y) f'))
                        L f' -> case f' of
                                 Lock k -> Op (inj' (Lock (lockFirst k y)))
-                                Unlock k -> Op (inj' (Unlock (lockPar k y)))
+                                Unlock k -> goesFirstLock k y
 
 -- function called when a par is locked on a program
 lockFirst :: Choose <: f => Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)
@@ -98,7 +91,7 @@ ngoesFirstLock n (Op f) y = case f of
                        R f' -> Op (inj' (fmap (flip (nlockPar (n-1)) y) f'))
                        L f' -> case f' of
                                 Lock k -> Op (inj' (Lock (nlockFirst n k y)))
-                                Unlock k -> Op (inj' (Unlock (nlockPar (n-1) k y)))
+                                Unlock k -> ngoesFirstLock n k y
 
 -- function called when a par is locked on a program
 nlockFirst :: Choose <: f => Int -> Free (Lock + f) a -> Free (Lock + f) b -> Free (Lock + f) (a, b)

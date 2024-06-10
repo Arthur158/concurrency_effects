@@ -10,7 +10,6 @@
 module ABPModel (
   -- abpmodel,
   dabpmodel,
-  Status(..),
   ) where
 
 import Lib
@@ -49,33 +48,73 @@ import LockConc
 -- dabpmodel :: Choose <: f => Int -> [a] -> Free f ((),[a])
 -- dabpmodel n (x:xs) = handle_ hStateS (handle_ hStateS (handle_ hStateS (dPar n (sendingProgram False xs) (receivingProgram True)) (Switch False)) True) x
 
-data Status = Switch Bool | Empty 
+-- data Status = Switch Bool | Empty 
+--
+-- sendingProgram :: (State Bool <: f, State Status <: f, State a <: f, Lock <: f) => Bool -> [a] -> Free f ()
+-- sendingProgram _ [] = do 
+--   put' Empty
+--   Pure ()
+-- sendingProgram b (x:xs) = do
+--   unlock;lock
+--   (cond::Bool) <- get'
+--   if cond == b then do put' x;put' (Switch (not cond));sendingProgram (not b) xs else sendingProgram b (x:xs)
+--
+-- receivingProgram :: (Lock <: f, State Bool <: f, State Status <: f, State a <: f) => Bool -> Free f [a] 
+-- receivingProgram b = do
+--   unlock;lock
+--   (cond::Status) <- get'
+--   case cond of
+--     Switch cond' -> if cond' /= b then do (something::a) <- get';put' cond';fmap (something:) (receivingProgram (not b)) else receivingProgram b
+--     Empty -> do (something::a) <- get'; return [something]
+--
+-- dabpmodel :: Choose <: f => Int -> [a] -> Free f ((),[a])
+-- dabpmodel n (x:xs) = handle_ hStateS 
+--                       (handle_ hStateS 
+--                         (handle_ hStateS 
+--                           (handle hLock 
+--                             (nlockPar n (sendingProgram False xs) (receivingProgram True))) 
+--                         (Switch False)) 
+--                       True) 
+--                     x
+--
+-- abpmodel :: Choose <: f => [a] -> Free f ((),[a])
+-- abpmodel (x:xs) = handle_ hStateS 
+--                       (handle_ hStateS 
+--                         (handle_ hStateS 
+--                           (handle hLock 
+--                             (lockPar (sendingProgram False xs) (receivingProgram True))) 
+--                         (Switch False)) 
+--                       True) 
+--                     x
+--
 
-sendingProgram :: (State Bool <: f, State Status <: f, State a <: f, Lock <: f) => Bool -> [a] -> Free f ()
-sendingProgram _ [] = do 
-  put' Empty
-  Pure ()
+data Inp = Inp Int | None -- unfortunately, did not find a way to use maybe, as state (Maybe a) would not let me put nothing.
+
+sendingProgram :: (State Bool <: f, State (Bool, Inp) <: f, Lock <: f) => Bool -> [Int] -> Free f ()
+sendingProgram b [] = do 
+  unlock;lock
+  (cond::Bool) <- get'
+  if cond == b then do put' (not cond, None);return () else sendingProgram b []
 sendingProgram b (x:xs) = do
   unlock;lock
   (cond::Bool) <- get'
-  if cond == b then do put' x;put' (Switch (not cond));sendingProgram (not b) xs else sendingProgram b (x:xs)
+  if cond == b then do put' (not cond, Inp x);sendingProgram (not b) xs else sendingProgram b (x:xs)
 
-receivingProgram :: (Lock <: f, State Bool <: f, State Status <: f, State a <: f) => Bool -> Free f [a] 
+receivingProgram :: (Lock <: f, State Bool <: f, State (Bool, Inp) <: f) => Bool -> Free f [Int] 
 receivingProgram b = do
   unlock;lock
-  (cond::Status) <- get'
-  case cond of
-    Switch cond' -> if cond' /= b then do (something::a) <- get';put' cond';fmap (something:) (receivingProgram (not b)) else receivingProgram b
-    Empty -> do (something::a) <- get'; return [something]
+  (cond::Bool, el :: Inp) <- get'
+  case el of
+    Inp something -> if cond /= b then do put' cond;fmap (something:) (receivingProgram (not b)) else receivingProgram b
+    None -> return []
 
-dabpmodel :: Choose <: f => Int -> [a] -> Free f ((),[a])
-dabpmodel n (x:xs) = handle_ hStateS 
-                      (handle_ hStateS 
-                        (handle_ hStateS 
-                          (handle hLock 
-                            (nlockPar n (sendingProgram False xs) (receivingProgram True))) 
-                        (Switch False)) 
-                      True) 
-                    x
+dabpmodel :: Choose <: f => Int -> [Int] -> Free f ((),[Int])
+dabpmodel n xs = handle_ hStateS 
+                  (handle_ hStateS 
+                    (handle hLock 
+                      (ngoesFirstLock n (sendingProgram True xs) (receivingProgram True))) 
+                  True) 
+                (True, None)
+
 
 

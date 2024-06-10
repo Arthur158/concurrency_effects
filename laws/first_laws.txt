@@ -13,7 +13,8 @@ m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
 
  so rule M === par m1 m2 == goesFirst m1 m2 ~+~ goesSecond m1 m2, which is literally its definition (1 step unfolding)
 
- rule LM1 === goesFirst (pure x) m = fmap (x,) m, which is also just a one step unfolding
+ rule LM1 === goesFirst (Op (f (Pure x))) m == (Op f (fmap (x,) m)
+          === Op (f (par (Pure x) m)) == (Op f (fmap (x,) m)
 
  rule LM2 === goesFirst zero m == zero
               goesFirst (Op Zero) m == zero
@@ -40,3 +41,34 @@ m1 || (m2 || m3) == fmap assoc ((m1 || m2) || m3)
         so for example goesFirst x y if x = Pure a is simply y (with the result of x in it let's say)
         and goesFirst is never supposed to be faced with a Pure, as it should be handled by par first.
         so only consider case where x = (Op (f k)), y = (Op ())
+
+        so if x = Op (f k):
+
+        also state that the fmap assoc is there because in the laws they assume associativity of par, and that holds in our interface except for the fact that you can only par 2 programs at a time, so 3 programs paired are going to be in a tuple containing a tuple
+ TC1 === fmap assoc (goesFirst (goesFirst (Op (f k)) y) z) == goesFirst (Op (f k)) (par y z)
+         fmap assoc (goesFirst (Op (f (par k y))) z) == Op (f (par k (par y z)))
+         fmap assoc (Op (f ( par (par k y) z))) == Op (f (par k (par y z)))
+         -- if we nest the assoc using lemmas and get rid of the Op f:
+         fmap assoc (par (par k y) z) == par k (par y z)
+         -- which is word by word the associativity we proved.
+
+TC2 === goesFirst x (Op Zero) == x >>= zero
+    Here we can assume that x = Op (f k)
+    === goesFirst (Op (f k)) (Op Zero) == (Op (f k)) >>= zero
+    === Op (f (par k (Op Zero))) == (Op (f k)) >>= zero
+    -- Here we will use the alternative instance of Free f a defined in src/Choose.hs
+        -- Using the Choose effect to make an instance of Alternative for Free f
+        instance (Functor f, Choose <: f) => Alternative (Free f) where
+          empty = zero
+          (<|>) = (~+~) 
+    === Op (f (goesFirst k (Op Zero)) ~+~ goesFirst (Op Zero) k) == (Op (f k)) >>= zero
+    === Op (f (goesFirst k (Op Zero) ~+~ Op Zero)) == (Op (f k)) >>= zero
+    -- remove the empty
+    === Op (f (goesFirst k (Op Zero)))  == (Op (f k)) >>= zero
+    for which we can remove Op f (we will need a lemma to prove that
+      Op (f k) >>= g == Op (f (k >>= g))
+    === goesFirst k (Op Zero) == k >>= zero
+    which can recursively call until the following case whre x = Pure a
+    === goesFirst (Pure x) (Op Zero) == Pure x >>= zero
+    === fmap (x,) (Op Zero) == Pure x >>= (Op Zero)
+    === Op Zero == Op Zero
