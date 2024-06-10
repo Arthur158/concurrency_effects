@@ -25,17 +25,11 @@ main = do
   -- let result :: ([Either String ([Int], [Int])], [Int])
   --     result = un(handle_ hState' (handle hChoose' (handle hErr par2))[0:: Int])
   -- let result :: [((Either String ([Int], [Int]), [Bool]), [Int])]
-  --     result = unToND(handleToND hChooseToND (handle_ hState' (handle_ hState' (handle hErr par3)[True:: Bool])[0::Int]))
-  -- let result :: [((Either String ([Int], [Int]), [Bool]), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle_ hState' (handle hErr par3)[True:: Bool])[0::Int]))
   -- let result :: ([(Either String ([Int], [Int]), [Bool])], [Int])
   --     result = un(handle_ hState' (handle hChoose' (handle_ hState' (handle hErr par3)[True:: Bool]))[0::Int])
   -- let result :: (([Either String ([Int], [Int])], [Bool]), [Int])
   --     result = un(handle_ hState' (handle_ hState' (handle hChoose' (handle hErr par3))[True:: Bool])[0::Int])
-  -- let result :: [(Either String ([Int],[Int]), [Int])]
-  --     result = unToND(handleToND hChooseToND (handle_ hState' (handle hErr par2)[0:: Int]))
-  -- let result :: [Bool]
-  --     result = unToND(handleToND hChooseToND (handle hErr pureChooseProg))
   -- let result :: (Either String [Bool], [Bool])
   --     result = un (handle hChoose (handle_ hState' (handle hErr stateb)[True]))
   -- let result :: (Either String [Int], [Int])
@@ -85,8 +79,8 @@ main = do
   -- let result :: [((Int, Int), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock tst) [0:: Int]))
 
-  let result ::([(Either String (Int, Bool), [Bool])], [Int]) 
-      result = un(handle_ hState' (handle hChooseLog (handle hErr (handle hLock pairing))) [0::Int])
+  -- let result ::([(Either String (Int, Bool), [Bool])], [Int]) 
+  --     result = un(handle_ hState' (handle hChooseLog (handle hErr (handle hLock pairing))) [0::Int])
   -- let result2 :: Either String [(((Int, Bool), [Int]), [Bool])]
   --     result2 = un(handle hErr (handle hChooseLog (handle_ hState' (handle hLock pairing) [0::Int])))
   -- let result2 :: Either String ((Int, Bool), [Int])
@@ -94,8 +88,8 @@ main = do
   -- let result :: [((Either String (Bool, Bool), [Int]), [Bool])]
   --     result = un(handle hChooseLog (handle_ hState' (handle hErr (handle hLock pairing2)) [0::Int]))
 
-  -- let result :: [(Either String ((Int, Bool), Bool), [Int])]
-  --     result = un(handle hChoose' (handle_ hState' (handle hErr (handle hLock triplepairing)) [0::Int]))
+  let result :: [(Either String ((Int, Bool), Bool), [Int])]
+      result = un(handle hChoose' (handle_ hState' (handle hErr (handle hLock triplepairing)) [0::Int]))
   -- let result2 :: [((Int, (Bool, Bool)), [Int])]
   --     result2 = un(handle hChoose' (handle_ hState' (handle hLock triplepairing2) [0::Int]))
   -- let result :: [(Either String (Int, Int), [Int])]
@@ -103,8 +97,8 @@ main = do
   -- let result :: [(Either String (Int, Bool), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock(handle hErr (handle hEndOfProgram parnew))) [0:: Int]))
   
-  let result ::[((), [Int])]
-      result = un(handle hChoose' (dabpmodel 20 [0::Int,1,2,3,4]))
+  -- let result ::[((), [Int])]
+  --     result = un(handle hChoose' (dabpmodel 20 [0::Int,1,2,3,4]))
   
   -- let result ::[(((), [Int]), [Bool])] 
   --     result = un(handle hChooseLog (dabpmodel 15 [0::Int, 1]))

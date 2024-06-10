@@ -25,14 +25,14 @@ module Programs (
   , makeState
   , twitch
   , newpar
-  , parWithLock
-  , parWithLock2
-  , parWithoutLock
-  , parWithLock3
+  -- , parWithLock
+  -- , parWithLock2
+  -- , parWithoutLock
+  -- , parWithLock3
   , tst
   , choice
   , choice_and_error
-  , something
+  -- , something
   , parnew
   , pairing
   , triplepairing
@@ -111,20 +111,20 @@ lockProgram5 = do
   put' (s + 1)
   get'
 
-parWithLock :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) (Int, Int)
-parWithLock = par lockProgram lockProgram2
-
-parWithLock2 :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) ((Int, Int), Int)
-parWithLock2 = lockPar (lockPar lockProgram lockProgram2) lockProgram
-
-parWithLock3 :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) (Int, Int)
-parWithLock3 = lockPar lockProgram4 lockProgram4 
-
-something :: (Functor f, End <: f,State Int <: f, Err <: f, Choose <: f) => Free f (Int, Int)
-something = par lockProgram5 lockProgram5 
-
-parWithoutLock :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f, Lock <: f) => Free f (Int, Int)
-parWithoutLock = par lockProgram lockProgram2
+-- parWithLock :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) (Int, Int)
+-- parWithLock = par lockProgram lockProgram2
+--
+-- parWithLock2 :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) ((Int, Int), Int)
+-- parWithLock2 = lockPar (lockPar lockProgram lockProgram2) lockProgram
+--
+-- parWithLock3 :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f) => Free (Lock + f) (Int, Int)
+-- parWithLock3 = lockPar lockProgram4 lockProgram4 
+--
+-- something :: (Functor f, End <: f,State Int <: f, Err <: f, Choose <: f) => Free f (Int, Int)
+-- something = par lockProgram5 lockProgram5 
+--
+-- parWithoutLock :: (Functor f, End <: f, State Int <: f, Err <: f, Choose <: f, Lock <: f) => Free f (Int, Int)
+-- parWithoutLock = par lockProgram lockProgram2
 
 incerr :: Free (Err + State Int + End) a
 incerr =  Op (R (L (Get (\s ->
@@ -191,7 +191,7 @@ btr = do
 
 
 
-parnew :: (Err <: f, End <: f, Choose <: f, State Int <: f) => Free f (Int, Bool)
+parnew :: (Err <: f, End <: f, Choose <: f, State Int <: f) => Free (Choose + f) (Int, Bool)
 parnew = par xtr btr
 
 
@@ -240,7 +240,7 @@ useZero2 :: Choose <: f => Free f Int
 useZero2 = do
   pure 1 ~+~ zero
 
-par6 :: Choose <: f => Free f (Int, Int)
+par6 :: Choose <: f => Free (Choose + f) (Int, Int)
 par6 = par useZero2 useZero
 
 progr1 :: (Choose <: f, Err <: f) => Free f Int
@@ -253,7 +253,7 @@ progr1 = do
   c <- choose
   if c then pure (s+7) else pure (s+11)
 
-progr2 :: (Choose <: f, Err <: f) => Free f ((Int, Int), (Int, Int))
+progr2 :: (Choose <: f, Err <: f) => Free (Choose + f) ((Int, Int), (Int, Int))
 progr2 = par (par (pure 4) (pure 1)) (par (pure 3) (pure 2))
 
 
@@ -273,9 +273,9 @@ makeState = do
 
 
 par1 :: (End <: f, State Int <: f,Err <: f, Choose <: f) => Free f (a,a)
-par1 = par ancerrDouble useplus
+par1 = fpar ancerrDouble useplus
 
-par3 :: (End <: f, State Bool <: f, State Int <: f,Err <: f, Choose <: f) => Free f (a,a)
+par3 :: (End <: f, State Bool <: f, State Int <: f,Err <: f, Choose <: f) => Free (Choose + f) (a,a)
 par3 = par ancerrDouble stateb
 
 stateb :: (End <: f, State Bool <: f,Err <: f, Choose <: f) => Free f a
@@ -292,7 +292,7 @@ pureChooseProg = do
 preinc :: Free (State Int) Int
 preinc = Op (Get (\s -> Op (Put (s + 1) (Pure s))))
 
-newpar :: Choose <: f => Free f (Int, Int)
+newpar :: Choose <: f => Free (Choose + f) (Int, Int)
 newpar = par (pure 4) (zero)
 
 
@@ -356,14 +356,14 @@ program3 = do
   (s::Int) <- get'
   Pure (s < 4)
 
-pairing :: (Choose <: f, State Int <: f, Err <: f) => Free f (Int, Bool)
+pairing :: (Choose <: f, State Int <: f, Err <: f) => Free (Choose + f) (Int, Bool)
 pairing = par program1 program2
 
 
 triplepairing :: (Choose <: f, State Int <: f, Err <: f) => Free f ((Int, Bool), Bool)
-triplepairing = par (par program1 program2) program3
+triplepairing = fpar (fpar program1 program2) program3
 
-triplepairing2 :: (Choose <: f, State Int <: f, Err <: f) => Free f (Int, (Bool, Bool))
+triplepairing2 :: (Choose <: f, State Int <: f, Err <: f) => Free (Choose + f) (Int, (Bool, Bool))
 triplepairing2 = par program1 (par program2 program3)
 
 

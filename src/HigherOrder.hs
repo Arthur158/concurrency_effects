@@ -20,10 +20,8 @@ module HigherOrder (
   , hup
   ) where
 
-import Lib
+import Lib 
 import Prelude hiding (sum)
-
-type f ->: g = forall a. f a -> g a
 
 data f :<->: g = Iso { to :: f ->: g, from :: g ->: f }
 {- which satisifies
@@ -94,11 +92,6 @@ mask = fold Pure (Op . R)
 
 mask' :: Functor f => Free f a -> Free (f + f') a
 mask' = fold Pure (Op . L)
-
-
-permute :: (Functor f, Functor f')
-        => (f ->: f') -> Free f a -> Free f' a
-permute f = fold Pure (Op . f)
 
 hup :: f <: g => (forall f'. Functor f' => Free (f + f') a -> Free f' b)
     -> Free g a -> Free g b
