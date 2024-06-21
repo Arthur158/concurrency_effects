@@ -21,14 +21,6 @@ import HigherOrder
 import Choose
 import Data.Tuple (swap)
 
-
-fakeHandle :: Choose <: f' => Handler Choose a f' a
-fakeHandle = Handler
-  { ret = \x -> pure x
-  , hdlr = \case
-               Choose f -> Op (inj' (Choose f))
-               Zero -> Op (inj' Zero)}
-
 fpar :: (Functor f, Choose <: f) => Free (Choose + f) a -> Free (Choose + f) b -> Free f (a, b)
 fpar x y = handle fakeHandle (par x y)
 

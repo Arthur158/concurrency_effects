@@ -1,0 +1,15 @@
+commutativity === par m1 m2 == fmap swap (par m2 m1)
+LHS
+  par m1 m2
+= {unfolding the par}
+  goesFirst m1 m2 ~+~ fmap swap (goesFirst m2 m1)
+RHS
+  fmap swap (par m2 m1)
+= {unfolding the par}
+  fmap swap (goesFirst m2 m1 ~+~ fmap swap (goesFirst m1 m2))
+= {using lemma p}
+  (fmap swap (goesFirst m2 m1) ~+~ (fmap (swap . swap) (goesFirst m1 m2)))
+= {by cancelling the swap's}
+  (fmap swap (goesFirst m2 m1) ~+~ (goesFirst m1 m2))
+= {by using the commutativity of the plus operator}
+  (goesFirst m1 m2) ~+~ fmap swap (goesFirst m2 m1)

@@ -1,0 +1,29 @@
+Some assumptions made in the laws:
+I realized that laws LM4 and associativity were wrong for my interface, as Choose would get chosen by the second goesFirst as the prioritized operation. I changed it by making it look like hte following:
+
+goesFirst :: (Functor f) => Free (Choose + f) a -> Free (Choose + f) b -> Free (Choose + f) (a, b)
+goesFirst (Pure x) y = fmap (x,) y
+goesFirst (Op x) y = case x of 
+                       L f -> Op (inj' (fmap (`goesFirst` y) f))
+                       R _ -> Op (fmap (`par` y) x)
+
+However, this version then assumes that the initial paired programs are fully Choose free, as the Choose operation now does not count as a operation to be prioritized.
+
+
+about Pure: In the laws, Pure will never be considered a onestep operation, but simply the result of an operation. This is because it is simply the result of a calculation.
+
+Lemma a:
+Op (f k) == Op (f l) >>= m === k == l >>= m
+-- use the instance of monad for Free f a
+Op (f k) == fold m Op (Op (f l)) === k == l >>= m
+Op (f k) == Op (f (fold m Op l)) === k == l >>= m
+-- use the same instance reversely
+Op (f k) == Op (f (l >>= m)) === k == l >>= m
+
+Lemma b:
+fmap f (Op (g x)) == Op (g (fmap f x))
+-- use instance of functor for Free f a
+fold (pure . f) Op (Op (g x)) == Op (g (fmap f x))
+Op (g (fold (pure . f) Op x) == Op (g (fmap f x))
+-- use same instacne reversely
+Op (g (fmap f x) == Op (g (fmap f x))

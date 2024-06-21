@@ -83,15 +83,15 @@ main = do
   --     result = un(handle_ hState' (handle hChooseLog (handle hErr (handle hLock pairing))) [0::Int])
   -- let result2 :: Either String [(((Int, Bool), [Int]), [Bool])]
   --     result2 = un(handle hErr (handle hChooseLog (handle_ hState' (handle hLock pairing) [0::Int])))
-  -- let result2 :: Either String ((Int, Bool), [Int])
-  --     result2 = un(handle hErr (handle_ hChooseOrder (handle_ hState' (handle hLock pairing) [0::Int])[True::Bool]))
+  let result :: [(Either String (Int, Bool), [Int])]
+      result = un(handle hChoose' (handle_ hState' (handle hErr pairing) [0::Int]))
   -- let result :: [((Either String (Bool, Bool), [Int]), [Bool])]
   --     result = un(handle hChooseLog (handle_ hState' (handle hErr (handle hLock pairing2)) [0::Int]))
 
-  let result :: [(Either String ((Int, Bool), Bool), [Int])]
-      result = un(handle hChoose' (handle_ hState' (handle hErr (handle hLock triplepairing)) [0::Int]))
+  -- let result :: [(((Int, Bool), Bool), [Int])]
+  --     result = un(handle hChoose' (handle_ hState' ((handle hLock triplepairing)) [0::Int]))
   -- let result2 :: [((Int, (Bool, Bool)), [Int])]
-  --     result2 = un(handle hChoose' (handle_ hState' (handle hLock triplepairing2) [0::Int]))
+  --     result2 = un(handle hChoose' (handle_ hState' ((handle hLock triplepairing2)) [0::Int]))
   -- let result :: [(Either String (Int, Int), [Int])]
   --     result = un(handle hChoose' (handle_ hState' (handle hLock(handle hErr (handle hEndOfProgram something))) [0:: Int]))
   -- let result :: [(Either String (Int, Bool), [Int])]
@@ -112,14 +112,14 @@ main = do
   print "length"
   print $ length result
   print "different elements"
-  print $ length $ nub result
+  -- print $ length $ nub result
 
-  -- printElementCounts result2
-  -- print "length"
+  -- printElementCounts result2 print "length"
   -- print $ length result2
   -- print "different elements"
   -- print $ length $ nub result2
   --
+  -- print "difference"
   -- let diff = symmetricDifference result (map (\(x,t) -> (assoc x,t)) result2)
   -- printElementCounts diff
   -- print "length"

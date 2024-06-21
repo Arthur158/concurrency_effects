@@ -33,6 +33,7 @@ library
       HigherOrder
       Lib
       LockConc
+      NewConc
       Programs
       State
       Util

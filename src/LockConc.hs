@@ -27,7 +27,7 @@ import Choose
 import Data.Tuple (swap)
 
 -- Effect for adding locks to programs
-data Lock k = Lock  k| Unlock k
+data Lock k = Lock  k | Unlock k
   deriving Functor
 
 --smart constructor for lock

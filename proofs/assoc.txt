@@ -1,23 +1,28 @@
+!!!! This uses an old equivalent version of par that goes as follows:
 {
- base case, m1 = Pure x, m2 = Pure y, m3 = Pure z
- 
- par (Pure x) (par (Pure y) (Pure z)) == fmap assoc (par (par (Pure x) (Pure y)) (Pure z))
+par x y = goesFirst x y ~+~ goesSecond x y
 
- using lemmas e, f and g
-Pure (x, (y,z)) == fmap assoc (Pure ((x, y),z))
-Pure (x, (y,z)) == Pure (assoc ((x, y),z))
-Pure (x, (y,z)) == Pure (x, (y,z))
+goesFirst :: Choose <: f => Free f a -> Free f b -> Free f (a, b)
+goesFirst (Pure x) y = fmap (x,) y
+goesFirst (Op x) y = Op (fmap (`par` y) x)
+
+goesSecond :: Choose <: f => Free f a -> Free f b -> Free f (a, b)
+goesSecond x (Pure y) = fmap (,y) x
+goesSecond x (Op f) = Op (fmap (par x) f)
+}
+{
+base case, m1 = Pure x, m2 = Pure y, m3 = Pure z
+ 
+par (Pure x) (par (Pure y) (Pure z)) == fmap assoc (par (par (Pure x) (Pure y)) (Pure z))
+par (Pure x) (Pure (y,z)) == fmap assoc (par (Pure (x,y)) Pure z)
+Pure (x,(y,z)) == fmap assoc (Pure ((x,y),z))
 }
 
 {
 first first intermediary step: m1 = Op (f k), m2 = Pure y, m3 = Pure z
 
  par (Op (f k)) (par (Pure y) (Pure z)) == fmap assoc (par (par (Op (f k)) (Pure y)) (Pure z))
-
- using lemma e
  par (Op (f k)) (Pure (y,z)) == fmap assoc (par (par (Op (f k)) (Pure y)) (Pure z))
-
- using lemma b1 and c1
  fmap (,(y,z)) (Op f k) == fmap (assoc . (,z) . (,y)) (Op (f k))
  fmap (,(y,z)) (Op f k) == fmap (\x -> assoc ((x,y), z)) (Op (f k))
  fmap (,(y,z)) (Op f k) == fmap (x,(y, z)) (Op (f k))
@@ -26,9 +31,7 @@ first first intermediary step: m1 = Op (f k), m2 = Pure y, m3 = Pure z
 second first intermediary step: m1 = Pure x, m2 = k, m3 = Pure z
 
 par (Pure x) (par k (Pure z)) == fmap assoc (par (par (Pure x) k) (Pure z))
-
 fmap (x,) (fmap (,z) k) == fmap assoc (fmap (,z) (fmap (x,) k))
-
 fmap (y -> (x,(y,z))) k == fmap (assoc . (y -> (x,y),z))) k
 fmap (y -> (x,(y,z))) k == fmap (y -> (x,(y,z))) k
 }
@@ -36,12 +39,10 @@ fmap (y -> (x,(y,z))) k == fmap (y -> (x,(y,z))) k
 third first intermediary step: m1 = Pure x, m2 = Pure y, m3 = k
 
 par (Pure x) (par (Pure y) k) == fmap assoc (par (par (Pure x) (Pure y)) k)
-
 fmap (x,) (fmap (y,) k) == fmap assoc (fmap (z -> ((x,y), z)) k)
 fmap (z -> (x (y,z))) k == fmap (assoc . (z -> ((x,y),z))) k
 fmap (z -> (x (y,z))) k == fmap (z -> (x,(y,z))) k
 }
--- all first intermediary steps must be similar in resolution.
 {
 
 first second intermediary step: m1 = Op (f k1), m2 = Op (g k2), m3 = Pure z
@@ -50,8 +51,6 @@ first second intermediary step: m1 = Op (f k1), m2 = Op (g k2), m3 = Pure z
 
  expand the par's
  goesFirst (Op (f k1)) (par (Op (g k2)) (Pure z)) ~+~ goesSecond (Op (f k1)) (par (Op (g k2)) (Pure z)) == fmap assoc (par (goesFirst (Op (f k1)) (Op (g k2)) ~+~ goesSecond (Op (f k1)) (Op (g k2))) (Pure z))
-
- apply lemma and distribute the fmap
  (goesFirst (Op (f k1)) (par (Op (g k2)) (Pure z))) ~+~ (goesSecond (Op (f k1)) (fmap (,z) (Op (g k2)))) == fmap (assoc . (,z)) (goesFirst (Op (f k1)) (Op (g k2)) ~+~ goesSecond (Op (f k1)) (Op (g k2)))
  (goesFirst (Op (f k1)) (par (Op (g k2)) (Pure z))) ~+~ (goesSecond (Op (f k1)) (fmap (,z) (Op (g k2)))) ==  (fmap (assoc . (,z)) (goesFirst (Op (f k1)) (Op (g k2)))) ~+~ (fmap (assoc . (,z)) (goesSecond (Op (f k1)) (Op (g k2))))
 
@@ -61,13 +60,12 @@ first second intermediary step: m1 = Op (f k1), m2 = Op (g k2), m3 = Pure z
  Distribute the fmap on RHS
  (Op (f (par k1 (par (Op gk2) (Pure z))))) ~+~ (Op (g (par (Op (f k1)) (fmap (,z) k2)))) == (Op (f (fmap (assoc . (,z)) (par k1 (Op (g k2)))))) ~+~ (Op (g (fmap (assoc . (,z) (par (Op (f k1) k2))))))
 
- apply lemma reversely
  (Op (f (par k1 (par (Op gk2) (Pure z))))) ~+~ (Op (g (par (Op (f k1)) (par k2 (Pure z))))) == (Op (f (fmap assoc (par (par k1 (Op (g k2))) (Pure z))))) ~+~ (Op (g (fmap assoc (par (par (Op (f k1) k2)) (Pure z)))))
 
  Get rid of the Op f and Op g at teh start of each case (recursive step) 
  (par k1 (par (Op (g k2)) (Pure z))) ~+~ (par (Op (f k1)) (par k2 (Pure z))) == (fmap assoc (par (par k1 (Op (g k2))) (Pure z))) ~+~ (fmap assoc (par (par (Op (f k1) k2)) (Pure z)))
 
- We can then separate the cases in 2 thanks to lemma:
+ We can then separate the cases in 2 thanks to commutativity of ~+~:
  first:
  par k1 (par (Op (g k2)) (Pure z)) == fmap assoc (par (par k1 (Op (g k2))) (Pure z))
    for which we can recursively call either this case (first second intermediary step) or teh second first intermediary step (if k1 is a Pure)
@@ -86,7 +84,6 @@ second second intermediary step: m1 = Op (f k1), m2 = Pure y, m3 = Op (h k3)
  (goesFirst (Op (f k1)) (par (Pure y) (Op (h k3)))) ~+~ (goesSecond (Op (f k1)) (par (Pure y) (Op (h k3)))) == fmap assoc ((goesFirst (par (Op (f k1)) (Pure y)) (Op (h k3))) ~+~ (goesSecond (par (Op (f k1)) (Pure y)) (Op (h k3))))
  (goesFirst (Op (f k1)) (par (Pure y) (Op (h k3)))) ~+~ (goesSecond (Op (f k1)) (fmap (y,) (Op (h k3)))) == fmap assoc ((goesFirst (fmap (,y) (Op (f k1))) (Op (h k3))) ~+~ (goesSecond (par (Op (f k1)) (Pure y)) (Op (h k3))))
 
-
  expand goesFirst and goesSecond
  (Op (fmap (`par` (par (Pure y) (Op (h k3)))) (f k1))) ~+~ (Op (fmap (par (Op (f k1))) (h (fmap (y,) k3)))) == fmap assoc ((Op (fmap (`par` (Op (h k3))) (f (fmap (,y) k1)))) ~+~ (Op (fmap (par (par (Op (f k1)) (Pure y))) (h k3))))
  (Op (f (par k1 (par (Pure y) (Op (h k3)))))) ~+~ (Op (h (par (Op (f k1)) (fmap (y,) k3)))) == fmap assoc ((Op (f (par (fmap (,y) k1) (Op (h k3))))) ~+~ (Op (h (par (par (Op (f k1)) (Pure y)) k3))))
@@ -96,13 +93,12 @@ second second intermediary step: m1 = Op (f k1), m2 = Pure y, m3 = Op (h k3)
  (Op (f (par k1 (par (Pure y) (Op (h k3)))))) ~+~ (Op (h (par (Op (f k1)) (fmap (y,) k3)))) == (fmap assoc (Op (f (par (fmap (,y) k1) (Op (h k3)))))) ~+~ (fmap assoc (Op (h (par (par (Op (f k1)) (Pure y)) k3))))
  (Op (f (par k1 (par (Pure y) (Op (h k3)))))) ~+~ (Op (h (par (Op (f k1)) (fmap (y,) k3)))) == (Op (f (fmap assoc (par (fmap (,y) k1) (Op (h k3)))))) ~+~ (Op (h (fmap assoc (par (par (Op (f k1)) (Pure y)) k3))))
 
- revert lemma
  (Op (f (par k1 (par (Pure y) (Op (h k3)))))) ~+~ (Op (h (par (Op (f k1)) (par (Pure y) k3)))) == (Op (f (fmap assoc (par (par k1 (Pure y)) (Op (h k3)))))) ~+~ (Op (h (fmap assoc (par (par (Op (f k1)) (Pure y)) k3))))
 
- Get rid of the Op f and Op g at teh start of each case (recursive step) 
+ Get rid of the Op f and Op g at the start of each case (recursive step) 
  (par k1 (par (Pure y) (Op (h k3)))) ~+~ (par (Op (f k1)) (par (Pure y) k3)) == (fmap assoc (par (par k1 (Pure y)) (Op (h k3)))) ~+~ (fmap assoc (par (par (Op (f k1)) (Pure y)) k3))
 
- We can separate in 2 cases thanks to lemma:
+ We can separate in 2 cases thanks to commutativity of ~+~:
  first:
   par k1 (par (Pure y) (Op (h k3))) == fmap assoc (par (par k1 (Pure y)) (Op (h k3)))
   for which we can recursively call either this case or the third first case (if k1 is a pure)
@@ -119,8 +115,6 @@ third second intermediary step: m1 = Pure x, m2 = Op (g k2), m3 = Op (h k3)
 
   expand the par's
  fmap (x,) ((goesFirst (Op (g k2)) (Op (h k3))) ~+~ (goesSecond (Op (g k2)) (Op (h k3)))) == fmap assoc ((goesFirst (par (Pure x) (Op (g k2))) (Op (h k3))) ~+~ (goesSecond (par (Pure x) (Op (g k2))) (Op (h k3))))
-
- apply lemma
  fmap (x,) ((goesFirst (Op (g k2)) (Op (h k3))) ~+~ (goesSecond (Op (g k2)) (Op (h k3)))) == fmap assoc ((goesFirst (fmap (x,) (Op (g k2))) (Op (h k3))) ~+~ (goesSecond (par (Pure x) (Op (g k2))) (Op (h k3))))
 
  nest
@@ -128,10 +122,8 @@ third second intermediary step: m1 = Pure x, m2 = Op (g k2), m3 = Op (h k3)
 
  distribute fmap on either side
  (Op (g (fmap (x,) (par k2 (Op (h k3)))))) ~+~ (Op h (fmap (x,) (par (Op (g k2)) (k3)))) == (Op g (fmap assoc (par (fmap (x,) k2) (Op (h k3))))) ~+~ (Op h (fmap assoc (par (par (Pure x) (Op (g k2))) k3)))
-
- apply reverse lemma:
  (Op (g (par (Pure x) (par k2 (Op (h k3)))))) ~+~ (Op h (par (Pure x) (par (Op (g k2)) (k3)))) == (Op g (fmap assoc (par (par (Pure x) k2) (Op (h k3))))) ~+~ (Op h (fmap assoc (par (par (Pure x) (Op (g k2))) k3)))
- we can separate in 2 cases thanks to the lemma:
+ we can separate in 2 cases thanks to the commutativity of ~+~:
  first:
   Op (g (par (Pure x) (par k2 (Op (h k3))))) == Op g (fmap assoc (par (par (Pure x) k2) (Op (h k3))))
   par (Pure x) (par k2 (Op (h k3))) == fmap assoc (par (par (Pure x) k2) (Op (h k3)))
@@ -150,13 +142,13 @@ inductive step: m1 = Op (f k1), m2 = Op (g k2), m3 = Op (h k3)
  expand into goesFirst and goesSecond a first time:
  goesFirst (Op (f k1)) (par (Op (g k2)) (Op (h k3))) ~+~ goesSecond (Op (f k1)) (goesFirst (Op (g k2)) (Op (h k3)) ~+~ goesSecond (Op (g k2)) (Op (h k3))) == fmap assoc (goesFirst (goesFirst (Op (f k1)) (Op (g k2)) ~+~ goesSecond (Op (f k1)) (Op (g k2))) (Op (h k3)) ~+~ goesSecond (par (Op (f k1)) (Op (g k2))) (Op (h k3)))
 
- applying lemma d1:
+ applying law LM4:
  (goesFirst (Op (f k1)) (par (Op (g k2)) (Op (h k3)))) ~+~ ((goesSecond (Op (f k1)) (goesFirst (Op (g k2)) (Op (h k3)))) ~+~ (goesSecond (Op (f k1)) (goesSecond (Op (g k2)) (Op (h k3))))) == fmap assoc (((goesFirst (goesFirst (Op (f k1)) (Op (g k2))) (Op (h k3))) ~+~ (goesFirst (goesSecond (Op (f k1)) (Op (g k2))) (Op (h k3)))) ~+~ goesSecond (par (Op (f k1)) (Op (g k2))) (Op (h k3)))
 
  then, we distribute the assoc:
  (goesFirst (Op (f k1)) (par (Op (g k2)) (Op (h k3)))) ~+~ ((goesSecond (Op (f k1)) (goesFirst (Op (g k2)) (Op (h k3)))) ~+~ (goesSecond (Op (f k1)) (goesSecond (Op (g k2)) (Op (h k3))))) == (((fmap assoc (goesFirst (goesFirst (Op (f k1)) (Op (g k2))) (Op (h k3)))) ~+~ (fmap assoc (goesFirst (goesSecond (Op (f k1)) (Op (g k2))) (Op (h k3))))) ~+~ (fmap assoc (goesSecond (par (Op (f k1)) (Op (g k2))) (Op (h k3)))))
 
- now, since we assume that ~+~ is associative and commutative in lemma, we are free to re arrange them in 3 sub cases as follow:
+ now, since we proved that ~+~ is associative and commutative under certain conditions, we are free to re arrange them in 3 sub cases as follow:
  1st:
  goesFirst (Op (f k1)) (par (Op (g k2)) (Op (h k3))) == fmap assoc (goesFirst (goesFirst (Op (f k1)) (Op (g k2))) (Op (h k3)))
  Op (f (par k1 (par (Op (g k2)) (Op (h k3))))) == fmap assoc (goesFirst (Op (f (par k1 (Op (g k2))))) (Op (h k3)))
