@@ -8,14 +8,14 @@
 {-# LANGUAGE OverlappingInstances #-}
 
 module State (
-  State(..)         -- Export the State type and all its constructors
-  , get               -- Export the get function
-  , get'               -- Export the get function
-  , put               -- Export the put function
-  , put'               -- Export the put function
-  , hErr              -- Export the hErr handler
+  State(..)         
+  , get            
+  , get'          
+  , put          
+  , put'        
+  , hErr       
   , hState'
-  , boxPuts
+  , hStateS
   ) where
 
 import Lib
@@ -41,6 +41,13 @@ hState = Handler_
       Put s' k -> k s'
       Get k -> k s s }
 
+hStateS :: Functor g => Handler_ (State s) a s g a
+hStateS = Handler_
+  { ret_ = \x s -> pure x
+  , hdlr_ = \x s -> case x of
+      Put s' k -> k s'
+      Get k -> k s s }
+
 hState' :: Functor g => Handler_ (State s) a [s] g (a, [s])
 hState' = Handler_
   { ret_ = \x ss -> pure (x, ss)
@@ -53,6 +60,3 @@ get' = Op (inj' (Get Pure))
 
 put'  :: State s <: f => s -> Free f ()
 put' s = Op (inj' (Put s (Pure ())))
-
-
-

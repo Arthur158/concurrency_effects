@@ -25,14 +25,15 @@ source-repository head
 
 library
   exposed-modules:
+      ABPModel
       Choose
       Conc
       End
       Err
       HigherOrder
-      HigherOrder2
       Lib
       LockConc
+      NewConc
       Programs
       State
       Util

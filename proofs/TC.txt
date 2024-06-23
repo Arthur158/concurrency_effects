@@ -1,0 +1,45 @@
+TC1:
+LHS
+  fmap assoc (goesFirst (goesFirst (Op (f k)) y) z)
+= {by unfolding the inner goesFirst}
+  fmap assoc (goesFirst (Op (f (par k y))) z)
+= {by unfolding goesFirst}
+  fmap assoc (Op (f ( par (par k y) z)))
+= {by using lemma b}
+  Op f (fmap assoc (par (par k y) z))
+RHS
+  goesFirst (Op (f k)) (par y z)
+= {by unfolding the goesFirst}
+  Op (f (par k (par y z)))
+-- if we remove the Op f on either side, we obtain the law for associativity wwhich we prove later.
+
+TC2:
+goesFirst (Op (f k)) (Op Zero) == (Op (f k)) >>= zero
+LHS
+  goesFirst (Op (f k)) (Op Zero)
+= {by unfolding goesFirst}
+  Op (f (par k (Op Zero)))
+= {by unfolding the par}
+  Op (f (goesFirst k (Op Zero) ~+~ fmap swap (goesFirst (Op Zero) k)))
+= {by unfolding the second goesFirst}
+  Op (f (goesFirst k (Op Zero) ~+~ fmap swap (Op Zero)))
+= {by using the alternative instance}
+  Op (f (goesFirst k (Op Zero)))
+RHS
+  (Op (f k) >>= zero)
+= {using lemma a}
+  Op (f (k >>= zero))
+-- Now if we remove the Op f on either side, we do an induction proof on k, where if k is an Op we call this case again,
+-- otherwise we call the following
+LHS
+  goesFirst (Pure x) (Op Zero)
+= {unfolding the goesFirst}
+  fmap (x,) (Op Zero)
+= {applying the fmap}
+  Op Zero
+RHS
+  (Pure x) >>= zero
+= {by definition of >>=}
+  Op Zero
+
+TC3 is about simultaneity, which we do not cover

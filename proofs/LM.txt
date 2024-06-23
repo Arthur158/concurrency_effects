@@ -1,0 +1,35 @@
+rule LM1:
+  goesFirst (Op (f (Pure x))) m
+= {by applying goesFirst}
+  Op (f (par (Pure x) m))
+= {by applying par}
+  Op f (fmap (x,) m)
+
+rule LM2:
+  goesFirst zero m
+= {by def. of zero}
+  goesFirst (Op Zero) m
+= {by def. of goesFirst}
+  Op (fmap (`par` m) Zero)
+= {by def. of fmap for Zero}
+  Op Zero
+= {by def. of zero}
+  zero
+
+rule LM3: goesFirst (Op (f (Pure a)) >>= x) y == Op (f (par (Pure a >>= x) y))
+  goesFirst (Op (f (Pure a)) >>= x) y
+= {by applying the goesFirst}
+  Op (f (par ((Pure a) >>= x) y))
+
+rule LM4:
+  goesFirst (x ~+~ y)
+= {by unfolding the plus operator}
+  goesFirst (Op (Choose (\k -> if k then x else y))) z
+= {by applying fmap on the function of the choose with the goesFirst}
+  Op (Choose (\k -> if k then goesFirst x z else goesFirst y z))
+= {by folding the plus operator back}
+= goesFirst x z ~+~ goesFirst y z
+
+LM5 is about lists instead of tuples, which we do not cover
+
+

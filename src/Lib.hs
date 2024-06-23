@@ -5,33 +5,24 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE ExplicitNamespaces #-}
--- {-# LANGUAGE OverlappingInstances #-}
-
 
 module Lib 
-  ( Free(..)          -- Export the Free type and all its constructors
-  -- You can also export type classes and their methods
-  , (<)               -- Export the type class (usually with the class name)
-  , Handler(..)       -- Export the Handler type and all its constructors
-  , handle            -- Export the handle function
+  ( Free(..)          
+  , (<)              
+  , Handler(..)     
+  , handle         
   , Handler_(..)
   , handle_
   , type (+)(..)
   , type (<)(..)
   , fold
+  , permute
+  , type (->:)
     ) where
-
-import Data.Functor.Classes
 
 data Free f a
   = Pure a
   | Op (f (Free f a))
-
-instance (Show a, Show1 f) => Show (Free f a) where
-    show (Pure x) = "Pure " ++ show x
-    show (Op f) = "Op (" ++ showsPrec1 0 f ")"
 
 infixr 6 +
 data (f + g) a
@@ -101,16 +92,3 @@ handle_ h = fold
   (\x -> case x of
      L x -> hdlr_ h x
      R x -> \p -> Op (fmap (\m -> m p) x))
-
-
-
-
-
-
-
-
-
-
-
-
-

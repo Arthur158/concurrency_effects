@@ -6,8 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE OverlappingInstances #-}
 
 

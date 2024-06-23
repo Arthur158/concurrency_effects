@@ -1,0 +1,307 @@
+base case : size -> 0 (DDD)
+b :: Bool
+any :: Maybe a 
+
+abpmodel xs = handle_ hStateS 
+                  (handle_ hStateS 
+                    (handle hLock 
+                      (goesFirstLock (sendingProgram b []) (receivingProgram b))) 
+                  b) 
+                (b, any)
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (goesFirstLock (do unlock;lock;cond <- get'; if cond == b then ...) (receivingProgram b))) 
+          b) 
+        (b, any))
+== -- apply handlers
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (cond <- get'; if cond == b then ...) (receivingProgram b))) 
+          b) 
+        (b, any)))))
+== apply all handlers, with the inner state bool applying on the get
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (put' (not cond, Nothing);return ()) (receivingProgram b))) 
+          b) 
+        (b, any)))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (put' (not cond, Nothing); fmap ((),) (receivingProgram b)) 
+          b) 
+        (b, any))))
+== apply handlers:
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap ((),) (receivingProgram True)) 
+          True) 
+        (not b, Nothing)))))
+== 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap ((),) (unlock;lock;(cond,el) <- get';case el of ...)) 
+          True) 
+        (not b, Nothing)))))
+== -- apply handlers, then the get is handled by state (bool, Maybe a)
+(handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap ((),) (return [])) 
+          True) 
+        (not b, Nothing))))
+== -- finish apply handlers (to a Pure so as a gen, all gens being just Pure)
+Pure ((),[])
+-- which proves our base case
+
+-----------------------------------------------------
+
+-- recursive case: CCC
+-- length = n+1
+b:: Bool
+any:: Maybe a 
+f :: some function (will simply do id when start of a proof, but an intermediate case would be fmapping the values already sent)
+
+abpmodel (x:xs) = handle_ hStateS 
+                  (handle_ hStateS 
+                    (handle hLock 
+                      (goesFirstLock (sendingProgram b (x:xs)) (fmap f receivingProgram b))) 
+                  b) 
+                (b, any)
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (goesFirstLock (do unlock;lock;cond <- get'; if cond == b then ...) (fmap f receivingProgram b))) 
+          b) 
+        (b, any))
+== -- apply handlers
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (cond <- get'; if cond == b then ...) (fmap freceivingProgram True))) 
+          True) 
+        (b, any)))))
+== -- apply all handlers, with the inner state bool applying on the get
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (put' (not cond, Just x);sendingProgram (not b) xs) (fmap f receivingProgram b))) 
+          b) 
+        (b, any)))
+  == -- apply handlers, put 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (sendingProgram (not b) xs) (fmap f receivingProgram b))) 
+          b) 
+        (not b, Just x)))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockFirst (unlock;lock;get';if ...) (fmap f receivingProgram b))) 
+          b) 
+        (not b, Just x)))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (lockPar (lock;get';if ...) (fmap f receivingProgram b))) 
+          b) 
+        (not b, Just x)))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((goesFirstLock (lock;get';if) (fmap f receivingProgram b)) ~+~ (fmap swap (goesFirstLock (fmap f receivingProgram b) (lock;get';if ...))))
+          b) 
+        (not b, Just x))
+
+-- which we can divide into two different cases, let us look at each separately: (AAA)
+-- first the left side of the plus operator (sendingProgram goesFirst)
+
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((goesFirstLock (lock;get';if) (fmap f receivingProgram b)))
+          b) 
+        (not b, Just x))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((lockFirst (cond <- get';if cond == b then ...) (fmap f receivingProgram b)))
+          b) 
+        (not b, Just x))
+== -- apply handlers, handler for state bool handles the get'
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((lockFirst (sendingProgram (not b) xs ) (fmap f receivingProgram b)))
+          b) 
+        (not b, Just x))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((lockFirst (unlock;lock;get';if ...) (fmap f receivingProgram b)))
+          b) 
+        (not b, Just x))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              ((lockPar (lock;get';if ...) (fmap f receivingProgram b)))
+          b) 
+        (not b, Just x))
+-- for which we can call recursively at the division of the cases (AAA)
+
+-- second, the right side of the plus operator (so receivingProgram going first)
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (goesFirstLock (fmap f receivingProgram b) (lock;get';if ...)))
+          b) 
+        (not b, Just x)))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (goesFirstLock (fmap f (unlock;lock;(cond,el) <- get'; case el of ...)) (lock;get';if ...)))
+          b) 
+        (not b, Just x)))
+  == -- push handler
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst (fmap f ((cond,el) <- get'; case el of ...)) (lock;get';if ...)))
+          b) 
+        (not b, Just x))
+  == -- apply handler for state (Bool, Maybe a)
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst (fmap f (put' False;fmap (x:) receivingProgram False)) (lock;get';if ...)))
+          b) 
+        (not b, Just x))
+  == -- now we will push the handlers again and apply the handler for State bool on the put until the next unlock. 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst (fmap f (fmap (x:) (do unlock;lock;(cond,el)<-get';case el ...))) (lock;get';if ...)))
+          not b) 
+        (not b, Just x))
+  == - also cumulate fmap f and fmap (x;)
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockPar (fmap (f . (x:)) (do lock;(cond,el)<-get';case el ...)) (do lock;get';if ...)))
+          not b) 
+        (not b, Just x))
+-- since goesFirst on an unlock turns into another goesFirst, we can add an unlock on eihter side of the lockPar and not change the program. Because of that, lockFirst x y = lockFirst (unlock;x) (unlock;y)
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockPar (fmap (f . (x:)) (receivingProgram not b)) (sendingProgram (not b) xs)))
+          not b) 
+        (not b, Just x))
+
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (goesFirstLock (fmap (f . (x:)) (receivingProgram not b)) (sendingProgram not b xs) ~+~ (fmap swap (goesFirstLock (sendingProgram (not b)) (fmap (f . (x:)) receivingProgram (not b))))))
+          not b) 
+        (not b, Just x))
+
+-- which we can divide into cases on either side of the choose. (Here should prove somehow why it is ok to divide on either side of the choose) (BBB)
+
+LHS
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (goesFirstLock (fmap (f . (x:)) (receivingProgram not b)) (sendingProgram (not b) xs) ))
+          not b) 
+        (not b, Just x))
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (goesFirstLock (fmap (f . (x:)) (unlock;lock;(cond,el) <- get'; case el of ...)) (sendingProgram not b) xs))
+          not b) 
+        (not b, Just x))
+  == -- push the fmap inwards (disappears in the 3 dots, will show up later, just cuz it would be too long to write otherwise), then apply goesFirstLock on unlock, then on lock
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst ((cond,el) <- get'; case el of ...) (sendingProgram (not b) xs)))
+          not b) 
+        (not b, Just x))
+== apply handler for state (bool, maybe a) for the get', and hte fmap shows up again
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst (fmap (f . (x:)) (receivingProgram (not b))) (sendingProgram not b) ))
+          not b) 
+        (not b, Just x))
+==
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockFirst (fmap (f . (x:)) (unlock;lock;get')) (sendingProgram (not b) xs)))
+          not b) 
+        (not b, Just x))
+== -- here, first push the fmap into the Unlock, then lockFirst turns into lockPar because of the unlock
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockPar (fmap (f . (x:)) (lock;get')) (sendingProgram (not b) xs)))
+          not b) 
+        (not b, Just x))
+== -- then, we can add the unlock back, as if it is chosen by the lockPar, it would get desugared into another goesFirstLock anyway. once it is added back, it turns back into receivingProgram
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (lockPar (fmap (f . (x:)) (receivingProgram (not b))) (sendingProgram (not b) xs)))
+          not b) 
+        (not b, Just x))
+-- for which we can recursively call back before the division into cases (BBB)
+
+RHS
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (fmap swap (fmap swap (goesFirstLock (sendingProgram (not b) xs) (fmap (f . (x:)) receivingProgram (not b)))))
+          not b) 
+        (not b, Just x))
+== -- fmap swap's cancel each other out
+  == 
+handle_ hStateS 
+          (handle_ hStateS 
+            (handle hLock 
+              (goesFirstLock (sendingProgram (not b) xs) (fmap (f . (x:)) receivingProgram (not b)))
+          not b) 
+        (not b, Just x))
+-- for which we can recursively call this case (CCC) or the base case (DDD) if the length is 0 (xs is [])
+
+Now, maybe we need to formalize this, but we see that the elements are going to stack up in the f as fmap ((x:).(y:). ...), so that once receivingProgram turns into a Pure, it will have the fmap apply each element in the list one by one in the right order, finishing with the id from the start
+
+-----------------------------------------------------------------
+
+Now, to prove the case with size 0, simply start the proof with abpmodel [], where the any turns into a Nothing and the b turns into True, and same thing for list xs of size n+1 (not 0)
+To prove the case with size n+1, xs, start the proof abpmodel xs, where the any turns into a Nothing and the b turns into a True, and the f turns into an id
+
+------------------------------------------------------------------

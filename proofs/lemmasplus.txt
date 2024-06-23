@@ -1,0 +1,43 @@
+Condition: Since this handler is supposed to accumulate all the results of all the branches, It is useful to use it for proving those. The output is going to be a Free monad with as a value in the Pure a list of all the accumulated results of each branch. 
+We say that the output of two ~+~ are equal when the list contained in the Pure of both of the resulting free monads contain the same elements in the same quantities, irrespective of their order
+
+--commutativity of Choose
+handle hChoose' (Pure  a ~+~ Pure b) == handle hChoose' (Pure b ~+~ Pure a)
+handle hChoose' (Op (Choose (\k -> if k then (Pure a) else (Pure b)))) == handle hChoose' (Op (Choose (\k -> if k then (Pure b) else (Pure a))))
+fold gen alg (Op (Choose (\k -> if k then (Pure a) else (Pure b)))) == fold gen alg (Op (Choose (\k -> if k then (Pure b) else (Pure a))))
+(\k -> if k then (fold gen alg (Pure a)) else (fold gen alg (Pure b))) (False) >>= \l -> fmap (++ l) ((\k -> if k then (fold gen alg (Pure a)) else (fold gen alg (Pure b))) (True)) == (\k -> if k then (fold gen alg (Pure b)) else (fold gen alg (Pure a))) (False) >>= \l -> fmap (++ l) ((\k -> if k then (fold gen alg (Pure b)) else (fold gen alg (Pure a))) (True))
+(\k -> if k then (Pure [a]) else (Pure [b])) (False) >>= \l -> fmap (++ l) ((\k -> if k then (Pure [a]) else (fold gen alg (Pure [b]))) (True)) == (\k -> if k then (Pure [b]) else (Pure [a])) (False) >>= \l -> fmap (++ l) ((\k -> if k then (Pure [b]) else (fold gen alg (Pure [a]))) (True))
+(Pure [b]) >>= \l -> fmap (++ l) ((Pure [a])) == (Pure [a]) >>= \l -> fmap (++ l) (Pure [b])
+Pure [a,b] == Pure [b,a]
+which holds under our start condition
+
+
+associativity of Choose:
+first LHS
+   handle hChoose' (Pure a ~+~ (Pure b ~+~ Pure c))
+== fold gen alg (Op (Choose (\k -> if k then Pure a else Op (Choose (\k -> if k then Pure b else Pure c)))))
+== alg (Op (Choose \k -> if k then fold gen alg (Pure a) else fold gen alg (Op (Choose (\k -> if k then Pure b else Pure c)))))
+== alg (Op (Choose \k -> if k then Pure [a] else alg (Op Choose (\k -> if k then fold gen alg (Pure b) else fold gen alg (Pure c)))))
+== alg (Op (Choose \k -> if k then Pure [a] else alg (Op Choose (\k -> if k then (Pure [b]) else (Pure [c])))))
+== alg (Op (Choose \k -> if k then Pure [a] else Pure [c] >>= fmap (++l) (Pure [b])))
+== alg (Op (Choose \k -> if k then Pure [a] else Pure [b,c]))
+== Pure [b,c] >>= fmap (++l) (Pure [a])
+== Pure [a,b,c]
+
+then RHS
+   handle hChoose' ((Pure a ~+~ Pure b) ~+~ Pure c)
+== fold gen alg (Op (Choose (\k -> if k then Op (Choose (\k -> if k then Pure a else Pure b)) else Pure c)))
+== alg (Op (Choose \k -> if k then fold gen alg (Op (Choose (\k -> if k then Pure a else Pure b)))else fold gen alg (Pure c)))
+== alg (Op (Choose \k -> if k then alg (Op Choose (\k -> if k then fold gen alg (Pure a) else fold gen alg (Pure b))) else Pure [c]))
+== alg (Op (Choose \k -> if k alg (Op Choose (\k -> if k then (Pure [a]) else (Pure [b]))) else Pure [c]))
+== alg (Op (Choose \k -> if k then Pure [b] >>= fmap (++l) (Pure [a]) else Pure [c]))
+== alg (Op (Choose \k -> if k then Pure [a,b] else Pure [c]))
+== Pure [c] >>= fmap (++l) (Pure [a,b])
+== Pure [a,b,c]
+ both sides are hence equal
+
+
+lemma p:
+fmap f (x ~+~ y) == fmap f x ~+~ fmap f y
+fmap f (Op (Choose (\k -> if k then x else y))) == Op (Choose (\k -> if k then fmap f x else fmap f y))
+fmap f (Op (Choose (\k -> if k then x else y))) == Op (Choose (\k -> if k then fmap f x else fmap f y))
