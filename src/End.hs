@@ -16,9 +16,6 @@ module End (
   ) where
 
 import Lib
-import HigherOrder
-import Err
-
 
 data End k -- No constructors!
   deriving Functor

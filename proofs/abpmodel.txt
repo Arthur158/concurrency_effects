@@ -1,12 +1,4 @@
--- how do we go about this:
---   induction on side of the input:
--- what are we proving: 
---   that abpmodel xs = Pure ((), xs)
--- The abpmodel contains a specific handler for State (and a specific handle for lock, but that one is pretty standard) to make the output easy to work with, but we could show the equivalence for other state handlers.
-
----------------------------------------------
-
-base case : size -> 0 (because didn't manage to get a working implementation that starts at 0) (DDD)
+base case : size -> 0 (DDD)
 b :: Bool
 any :: Maybe a 
 
@@ -305,8 +297,11 @@ handle_ hStateS
         (not b, Just x))
 -- for which we can recursively call this case (CCC) or the base case (DDD) if the length is 0 (xs is [])
 
-Now, maybe we need to formalize this, but we see that the elements are goign to stack up in the f as fmap ((x:).(y:). ...), so that once receivingProgram turns into a Pure, it will have the fmap apply each element in hte list one by one in the right order, finishing with the id from the start
+Now, maybe we need to formalize this, but we see that the elements are going to stack up in the f as fmap ((x:).(y:). ...), so that once receivingProgram turns into a Pure, it will have the fmap apply each element in the list one by one in the right order, finishing with the id from the start
 
 -----------------------------------------------------------------
 
-Now, to prove the case with size 0, simply launch the proof with abpmodel [], where the any turns into a Nothing and the b turns into True, and same thing for list xs of size n+1 (not 0)
+Now, to prove the case with size 0, simply start the proof with abpmodel [], where the any turns into a Nothing and the b turns into True, and same thing for list xs of size n+1 (not 0)
+To prove the case with size n+1, xs, start the proof abpmodel xs, where the any turns into a Nothing and the b turns into a True, and the f turns into an id
+
+------------------------------------------------------------------

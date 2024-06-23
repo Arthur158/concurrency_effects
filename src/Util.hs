@@ -1,11 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TupleSections #-}
 
 module Util (
   printElementCounts
@@ -53,10 +50,3 @@ processBools bools = reverse $ foldl flipBool [] bools where
   -- Helper function to determine if the number of False in the list so far is odd
   shouldFlip :: [Bool] -> Bool
   shouldFlip acc = odd $ length $ filter not acc
-
-
--- Example usage
--- main :: IO ()
--- main = do
---     let myList = ["apple", "banana", "apple", "orange", "banana", "apple"]
---     printElementCounts myList

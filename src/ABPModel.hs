@@ -8,19 +8,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module ABPModel (
-  -- abpmodel,
+  abpmodel,
   dabpmodel,
   ) where
 
 import Lib
 import HigherOrder
 import Choose
-import Conc
 import State
 import LockConc
 
-
-data Inp = Inp Int | None -- unfortunately, did not find a way to use maybe, as state (Maybe a) would not let me put nothing.
+data Inp = Inp Int | None -- unfortunately, did not find a way to use maybe, as state (Maybe a) would not allow to put Nothing.
 
 sendingProgram :: (State Bool <: f, State (Bool, Inp) <: f, Lock <: f) => Bool -> [Int] -> Free f ()
 sendingProgram b [] = do 
@@ -40,13 +38,19 @@ receivingProgram b = do
     Inp something -> if cond /= b then do put' cond;fmap (something:) (receivingProgram (not b)) else receivingProgram b
     None -> return []
 
+abpmodel :: Choose <: f => [Int] -> Free f ((),[Int])
+abpmodel xs = handle_ hStateS 
+                  (handle_ hStateS 
+                    (handle hLock 
+                      (goesFirstLock (sendingProgram True xs) (receivingProgram True))) 
+                  True) 
+                (True, None)
+
+-- version of the abp model using dlockPar, to specify a max depth and hence not get stuck in a loop
 dabpmodel :: Choose <: f => Int -> [Int] -> Free f ((),[Int])
 dabpmodel n xs = handle_ hStateS 
                   (handle_ hStateS 
                     (handle hLock 
-                      (ngoesFirstLock n (sendingProgram True xs) (receivingProgram True))) 
+                      (dgoesFirstLock n (sendingProgram True xs) (receivingProgram True))) 
                   True) 
                 (True, None)
-
-
-

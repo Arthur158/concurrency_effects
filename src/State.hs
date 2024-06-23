@@ -8,12 +8,12 @@
 {-# LANGUAGE OverlappingInstances #-}
 
 module State (
-  State(..)         -- Export the State type and all its constructors
-  , get               -- Export the get function
-  , get'               -- Export the get function
-  , put               -- Export the put function
-  , put'               -- Export the put function
-  , hErr              -- Export the hErr handler
+  State(..)         
+  , get            
+  , get'          
+  , put          
+  , put'        
+  , hErr       
   , hState'
   , hStateS
   ) where
@@ -60,6 +60,3 @@ get' = Op (inj' (Get Pure))
 
 put'  :: State s <: f => s -> Free f ()
 put' s = Op (inj' (Put s (Pure ())))
-
-
-
