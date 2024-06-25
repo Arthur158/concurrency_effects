@@ -1,3 +1,9 @@
+# Research Project CSE3000
+
+This repository links to the work of Arthur Jacques for the Research project course of the CSE bachelor at TU Delft.
+
+Please see their projects [here](https://cse3000-research-project.github.io/).
+
 # Concurrency Effects and Handlers
 
 This project explores the implementation of a model for concurrency using algebraic effects and handlers in Haskell. It includes various modules and laws to ensure that concurrency operations are well-defined and adhere to established principles.
